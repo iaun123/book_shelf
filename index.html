@@ -3,47 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Book Shelf</title>
+    <title>My Book Shelf - Chananya</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <h1>📚 ชั้นหนังสือของฉัน</h1>
+        
+        <div class="filter-container">
+            <button onclick="filterBooks('all')">ทั้งหมด</button>
+            <button onclick="filterBooks('Comic')">มังงะ</button>
+            <button onclick="filterBooks('Novel')">นิยาย</button>
+            <button onclick="filterBooks('E-Book')">อีบุ๊ค</button>
+        </div>
+
         <div id="book-list">กำลังโหลดข้อมูลหนังสือ...</div>
+
+        <hr>
+
+        <div class="admin-panel">
+            <h3>📝 เพิ่มหนังสือใหม่</h3>
+            <input type="text" id="new-title" placeholder="ชื่อหนังสือ (เช่น One Piece)">
+            <input type="text" id="new-volume" placeholder="จำนวนเล่ม/เล่มที่">
+            <select id="new-category">
+                <option value="Comic">มังงะ (Comic)</option>
+                <option value="Novel">นิยาย (Novel)</option>
+                <option value="E-Book">อีบุ๊ค (E-Book)</option>
+            </select>
+            <button onclick="addBook()" id="btn-add">➕ เพิ่มลงชั้นหนังสือ</button>
+        </div>
     </div>
 
     <script>
+        // ลิงก์สำหรับดึงข้อมูล (Read)
         const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSA35RErZ7gx0C-iy8ZQQnysbSuBOS1HLvSLXUIxOVukp5yckMAGE0hHK8LlA0fWR9PwmpFhaSJM1Vq/pub?output=csv';
+        // ลิงก์สำหรับเพิ่มข้อมูล (Write)
+        const scriptUrl = 'https://script.google.com/macros/s/AKfycbz7NA9yYxHmL_ahXr8HFsC5Ed75BnuCoJcdixzK8kSZ8LSZ_kow8I2_ZXTHs6Iqh5yU/exec';
 
+        let allBooks = []; 
+
+        // 1. ฟังก์ชันดึงข้อมูลจาก Google Sheets
         async function fetchBooks() {
             try {
                 const response = await fetch(sheetUrl);
                 const data = await response.text();
                 const rows = data.split('\n');
-                let html = '<ul>';
-
+                
+                allBooks = []; 
                 for (let i = 1; i < rows.length; i++) {
                     const columns = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
                     if (columns.length >= 2) {
                         const title = columns[0].replace(/^"|"$/g, '').trim(); 
-                        const volume = columns[1].replace(/^"|"$/g, '').trim();
-                        const note = columns[2] ? columns[2].replace(/^"|"$/g, '').trim() : "";
+                        const volume = columns[1] ? columns[1].replace(/^"|"$/g, '').trim() : "";
+                        // ปรับ index เป็น 3 ถ้าหมวดหมู่อยู่คอลัมน์ D
+                        const category = columns[3] ? columns[3].replace(/^"|"$/g, '').trim() : "Comic"; 
 
-                        if(title && title !== "") {
-                            html += `
-                                <li class="book-item">
-                                    <div class="book-title">${title}</div>
-                                    <div class="book-detail">จำนวน: ${volume} เล่ม | <small>${note}</small></div>
-                                </li>`;
+                        if(title) {
+                            allBooks.push({ title, volume, category });
                         }
                     }
                 }
-                html += '</ul>';
-                document.getElementById('book-list').innerHTML = html;
+                displayBooks(allBooks);
             } catch (error) {
                 document.getElementById('book-list').innerHTML = '❌ ไม่สามารถโหลดข้อมูลได้';
             }
         }
+
+        // 2. ฟังก์ชันแสดงผลรายการหนังสือ
+        function displayBooks(books) {
+            let html = '<ul>';
+            if (books.length === 0) {
+                html += '<p style="text-align:center; color:#999;">ไม่มีข้อมูลในหมวดนี้</p>';
+            } else {
+                books.forEach(book => {
+                    html += `
+                        <li class="book-item">
+                            <div class="book-title">${book.title}</div>
+                            <div class="book-detail">หมวด: ${book.category} | จำนวน: ${book.volume} เล่ม</div>
+                        </li>`;
+                });
+            }
+            html += '</ul>';
+            document.getElementById('book-list').innerHTML = html;
+        }
+
+        // 3. ฟังก์ชันกรองหมวดหมู่
+        function filterBooks(cat) {
+            if (cat === 'all') {
+                displayBooks(allBooks);
+            } else {
+                const filtered = allBooks.filter(book => book.category === cat);
+                displayBooks(filtered);
+            }
+        }
+
+        // 4. ฟังก์ชันส่งข้อมูลไป Google Sheets
+        async function addBook() {
+            const title = document.getElementById('new-title').value;
+            const volume = document.getElementById('new-volume').value;
+            const category = document.getElementById('new-category').value;
+            const btn = document.getElementById('btn-add');
+
+            if (!title) return alert("กรุณาใส่ชื่อหนังสือด้วยครับ");
+
+            btn.disabled = true;
+            btn.innerText = "กำลังบันทึก...";
+
+            try {
+                await fetch(scriptUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'add', title, volume, category })
+                });
+                
+                alert("ส่งข้อมูลไปที่ Google Sheets เรียบร้อย! กรุณารอ 2-5 นาทีเพื่อให้หน้าเว็บอัปเดต");
+                document.getElementById('new-title').value = '';
+                document.getElementById('new-volume').value = '';
+                location.reload();
+            } catch (e) {
+                alert("เกิดข้อผิดพลาดในการเชื่อมต่อ");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "➕ เพิ่มลงชั้นหนังสือ";
+            }
+        }
+
+        // เรียกใช้งานครั้งแรกเมื่อโหลดหน้าเว็บ
         fetchBooks();
     </script>
 </body>
