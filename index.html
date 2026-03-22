@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Book Shelf</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; padding: 20px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; }
+        #book-list ul { list-style: none; padding: 0; }
+        .book-item { margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        .book-title { font-weight: bold; color: #2c3e50; }
+        .book-detail { font-size: 0.9rem; color: #7f8c8d; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 ชั้นหนังสือของฉัน</h1>
+        <div id="book-list">กำลังโหลดข้อมูลหนังสือ...</div>
+    </div>
+
+    <script>
+        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSA35RErZ7gx0C-iy8ZQQnysbSuBOS1HLvSLXUIxOVukp5yckMAGE0hHK8LlA0fWR9PwmpFhaSJM1Vq/pub?output=csv';
+
+        async function fetchBooks() {
+            try {
+                const response = await fetch(sheetUrl);
+                const data = await response.text();
+                const rows = data.split('\n');
+                let html = '<ul>';
+
+                for (let i = 1; i < rows.length; i++) {
+                    const columns = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
+                    if (columns.length >= 2) {
+                        const title = columns[0].replace(/^"|"$/g, '').trim(); 
+                        const volume = columns[1].replace(/^"|"$/g, '').trim();
+                        const note = columns[2] ? columns[2].replace(/^"|"$/g, '').trim() : "";
+
+                        if(title && title !== "") {
+                            html += `
+                                <li class="book-item">
+                                    <div class="book-title">${title}</div>
+                                    <div class="book-detail">จำนวน: ${volume} เล่ม | <small>${note}</small></div>
+                                </li>`;
+                        }
+                    }
+                }
+                html += '</ul>';
+                document.getElementById('book-list').innerHTML = html;
+            } catch (error) {
+                document.getElementById('book-list').innerHTML = '❌ ไม่สามารถโหลดข้อมูลได้';
+            }
+        }
+        fetchBooks();
+    </script>
+</body>
+</html>
