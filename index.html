@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Private Shelf</title>
+    <title>My Private Shelf | Chananya</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -12,9 +12,9 @@
     <div id="login-overlay" class="auth-overlay">
         <div class="login-card">
             <h2>🔐 Private Access</h2>
-            <p>กรุณาเข้าสู่ระบบเพื่อดูชั้นหนังสือ</p>
-            <input type="email" id="auth-email" placeholder="Email">
-            <input type="password" id="auth-password" placeholder="Password">
+            <p>กรุณาเข้าสู่ระบบเพื่อจัดการชั้นหนังสือ</p>
+            <input type="email" id="auth-email" placeholder="Email" onkeypress="if(event.key === 'Enter') handleLogin()">
+            <input type="password" id="auth-password" placeholder="Password" onkeypress="if(event.key === 'Enter') handleLogin()">
             <button onclick="handleLogin()" id="login-btn">Sign In</button>
         </div>
     </div>
@@ -25,7 +25,10 @@
                 <input type="text" id="search-input" placeholder="🔍 ค้นหาชื่อเรื่อง..." oninput="searchBook()">
                 <div id="search-result" class="search-status"></div>
             </div>
-            <button onclick="handleLogout()" class="logout-btn-top">Logout</button>
+            <div class="user-controls">
+                <span id="display-user" style="margin-right: 15px; font-size: 0.9em; opacity: 0.8;"></span>
+                <button onclick="handleLogout()" class="logout-btn-top">Logout</button>
+            </div>
         </div>
 
         <div class="main-wrapper">
@@ -60,6 +63,7 @@
     </div>
 
     <script>
+        // --- ⚙️ การตั้งค่า Supabase ---
         const SUPABASE_URL = 'https://iesaxrdexywsegppjbxo.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_9Rxgo8i46-CxS5-vRHmIUQ_fiqTQn1T';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -67,13 +71,14 @@
         let myLibrary = [];
         let currentDisplayData = [];
 
-        // --- ระบบ Authentication ---
+        // --- 🔐 ระบบ Authentication ---
         async function checkUser() {
             const { data: { user } } = await _supabase.auth.getUser();
             if (user) {
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('app-content').style.display = 'block';
-                fetchAllBooks(); // โหลดข้อมูลเฉพาะเมื่อ Login แล้วเท่านั้น
+                document.getElementById('display-user').innerText = user.email;
+                fetchAllBooks();
             } else {
                 document.getElementById('login-overlay').style.display = 'flex';
                 document.getElementById('app-content').style.display = 'none';
@@ -85,11 +90,13 @@
             const password = document.getElementById('auth-password').value;
             const btn = document.getElementById('login-btn');
             
+            if(!email || !password) return alert("กรุณากรอกให้ครบ");
+            
             btn.innerText = "Checking...";
             const { error } = await _supabase.auth.signInWithPassword({ email, password });
 
             if (error) {
-                alert("เข้าสู่ระบบไม่สำเร็จ: " + error.message);
+                alert("Login Error: " + error.message);
                 btn.innerText = "Sign In";
             } else {
                 checkUser();
@@ -101,12 +108,22 @@
             checkUser();
         }
 
-        // --- ระบบจัดการข้อมูล (เหมือนเดิมแต่ย้ายมาทำงานหลัง Login) ---
+        // --- 📥 จัดการข้อมูลตาราง 'book' ---
         async function fetchAllBooks() {
-            const { data, error } = await _supabase.from('books').select('*').order('title', { ascending: true });
+            const listDiv = document.getElementById('book-list');
+            listDiv.innerHTML = "Loading...";
+
+            const { data, error } = await _supabase
+                .from('book')
+                .select('*')
+                .order('title', { ascending: true });
+
             if (!error) {
                 myLibrary = data;
                 displayLibrary(myLibrary);
+            } else {
+                console.error(error);
+                listDiv.innerHTML = "Error fetching data.";
             }
         }
 
@@ -114,6 +131,8 @@
             currentDisplayData = data;
             const listDiv = document.getElementById('book-list');
             document.getElementById('back-btn').style.display = 'none';
+            document.getElementById('list-title').innerHTML = "<h3>Your Collection</h3>";
+            
             let html = '<div class="grid-container">';
             data.forEach((series, index) => {
                 html += `
@@ -123,7 +142,7 @@
                     </div>`;
             });
             html += '</div>';
-            listDiv.innerHTML = html || '<p>ยังไม่มีข้อมูล</p>';
+            listDiv.innerHTML = data.length > 0 ? html : '<p style="text-align:center; color:#999; margin-top:20px;">ยังไม่มีหนังสือในชั้นนี้</p>';
         }
 
         function showDetail(index) {
@@ -131,12 +150,21 @@
             if (!series) return;
             const listDiv = document.getElementById('book-list');
             document.getElementById('back-btn').style.display = 'block';
+            document.getElementById('list-title').innerHTML = `<h3>${series.title}</h3>`;
+            
             let html = `<div class="detail-view">
                 <p>Category: <b>${series.category}</b></p>
                 <div class="vol-grid">`;
+            
+            // เรียงลำดับตัวเลขเล่ม
             const sortedVols = [...series.volumes].sort((a, b) => parseFloat(a) - parseFloat(b));
-            sortedVols.forEach(v => { html += `<span class="vol-tag">เล่มที่ ${v}</span>`; });
-            html += `</div><button onclick="deleteSeries(${series.id})" class="del-btn">ลบทั้งชุด</button></div>`;
+            sortedVols.forEach(v => { 
+                html += `<span class="vol-tag">เล่มที่ ${v}</span>`; 
+            });
+            
+            html += `</div>
+                <button onclick="deleteSeries(${series.id})" class="del-btn" style="margin-top:30px;">ลบหนังสือชุดนี้</button>
+            </div>`;
             listDiv.innerHTML = html;
         }
 
@@ -144,24 +172,33 @@
             const title = document.getElementById('new-title').value.trim();
             const vol = document.getElementById('new-vol').value.trim();
             const category = document.getElementById('new-category').value;
-            if (!title || !vol) return;
+            
+            if (!title || !vol) return alert("กรุณากรอกชื่อเรื่องและเลขเล่ม");
 
+            // เช็คว่ามีเรื่องนี้อยู่แล้วหรือไม่
             let existing = myLibrary.find(s => s.title.toLowerCase() === title.toLowerCase());
+            
             if (existing) {
                 if (!existing.volumes.includes(vol)) {
-                    await _supabase.from('books').update({ volumes: [...existing.volumes, vol] }).eq('id', existing.id);
+                    const newVols = [...existing.volumes, vol];
+                    await _supabase.from('book').update({ volumes: newVols }).eq('id', existing.id);
+                } else {
+                    alert("มีเล่มนี้อยู่แล้วในระบบ");
                 }
             } else {
-                await _supabase.from('books').insert([{ title, category, volumes: [vol] }]);
+                // เพิ่มใหม่ (user_id จะถูกใส่ให้อัตโนมัติจาก Default Value ใน DB)
+                await _supabase.from('book').insert([{ title, category, volumes: [vol] }]);
             }
+            
             document.getElementById('new-title').value = '';
             document.getElementById('new-vol').value = '';
             fetchAllBooks();
         }
 
         async function deleteSeries(id) {
-            if(confirm("ลบข้อมูลออกจาก Cloud?")) {
-                await _supabase.from('books').delete().eq('id', id);
+            if(confirm("ยืนยันการลบข้อมูลนี้ออกจาก Cloud?")) {
+                const { error } = await _supabase.from('book').delete().eq('id', id);
+                if(error) alert(error.message);
                 fetchAllBooks();
             }
         }
@@ -172,11 +209,14 @@
 
         function searchBook() {
             const query = document.getElementById('search-input').value.toLowerCase();
-            const found = myLibrary.find(s => s.title.toLowerCase().includes(query));
             const res = document.getElementById('search-result');
-            res.innerHTML = found ? `✅ มีเรื่องนี้: ${found.title}` : `❌ ไม่มีเรื่องนี้`;
+            if(!query) { res.innerHTML = ""; return; }
+            
+            const found = myLibrary.find(s => s.title.toLowerCase().includes(query));
+            res.innerHTML = found ? `✅ พบเรื่องนี้: ${found.title}` : `❌ ยังไม่มีเรื่องนี้`;
         }
 
+        // เริ่มต้นตรวจสอบสถานะการ Login
         checkUser();
     </script>
 </body>
