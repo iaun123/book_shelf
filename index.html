@@ -10,7 +10,7 @@
 
     <div class="top-nav">
         <div class="search-box">
-            <input type="text" id="search-input" placeholder="🔍 ค้นหาชื่อหนังสือเพื่อเช็คเล่ม..." oninput="searchBook()">
+            <input type="text" id="search-input" placeholder="🔍 ค้นหาชื่อเรื่องเพื่อเช็คเล่มที่มี..." oninput="searchBook()">
             <div id="search-result" class="search-status"></div>
         </div>
     </div>
@@ -21,17 +21,24 @@
             <button onclick="showAllSeries()">🏠 All Series</button>
             <button onclick="filterBooks('Comic')">📖 Comic</button>
             <button onclick="filterBooks('Novel')">📕 Novel</button>
-            <button onclick="exportToCSV()" class="export-btn">📤 Export to CSV</button>
+            
+            <hr style="border: 0.5px solid rgba(255,255,255,0.1); margin: 20px 0;">
+            
+            <button onclick="exportToCSV()" class="export-btn">📤 Export CSV</button>
+            
+            <label for="import-csv" class="custom-file-upload">📥 Import CSV</label>
+            <input type="file" id="import-csv" accept=".csv" onchange="importFromCSV(event)" style="display:none;">
             
             <div class="admin-panel">
-                <h3>➕ Add Book</h3>
+                <h3>➕ Add New Book</h3>
                 <input type="text" id="new-title" placeholder="ชื่อเรื่อง">
                 <input type="text" id="new-vol" placeholder="เล่มที่">
                 <select id="new-category">
                     <option value="Comic">Comic</option>
                     <option value="Novel">Novel</option>
+                    <option value="EBook">E-Book</option>
                 </select>
-                <button onclick="addBook()">Save to Shelf</button>
+                <button onclick="addBook()" id="save-btn">Save to Shelf</button>
             </div>
         </div>
 
@@ -43,9 +50,10 @@
     </div>
 
     <script>
+        // โหลดข้อมูลจาก LocalStorage
         let myLibrary = JSON.parse(localStorage.getItem('myLibrary')) || [];
 
-        // --- ระบบค้นหาและเช็คเล่ม (Search & Check) ---
+        // --- 1. ระบบค้นหา (Search & Check) ---
         function searchBook() {
             const query = document.getElementById('search-input').value.trim().toLowerCase();
             const resultDiv = document.getElementById('search-result');
@@ -55,7 +63,6 @@
                 return;
             }
 
-            // ค้นหาว่ามีเรื่องนี้ไหม
             const foundSeries = myLibrary.find(s => s.title.toLowerCase().includes(query));
             
             if (foundSeries) {
@@ -67,19 +74,23 @@
             }
         }
 
-        // --- ระบบแสดงผลแบบ Series ---
+        // --- 2. ระบบแสดงผล (Display Logic) ---
         function displayLibrary(data = myLibrary) {
             const listDiv = document.getElementById('book-list');
             document.getElementById('back-btn').style.display = 'none';
             let html = '<div class="grid-container">';
             
-            data.forEach((series, index) => {
-                html += `
-                    <div class="series-card" onclick="showDetail(${index})">
-                        <div class="card-title">${series.title}</div>
-                        <div class="card-info">${series.category} | ${series.volumes.length} Vols</div>
-                    </div>`;
-            });
+            if (data.length === 0) {
+                html = '<p style="color:#999; text-align:center; width:100%;">ไม่พบข้อมูลหนังสือ</p>';
+            } else {
+                data.forEach((series, index) => {
+                    html += `
+                        <div class="series-card" onclick="showDetail(${index})">
+                            <div class="card-title">${series.title}</div>
+                            <div class="card-info">${series.category} | ${series.volumes.length} Vols</div>
+                        </div>`;
+                });
+            }
             html += '</div>';
             listDiv.innerHTML = html;
         }
@@ -91,11 +102,16 @@
             document.getElementById('list-title').innerHTML = `<h3>${series.title} Detail</h3>`;
 
             let html = `<div class="detail-view">
-                <p>หมวดหมู่: ${series.category}</p>
+                <p>หมวดหมู่: <b>${series.category}</b></p>
                 <div class="vol-grid">`;
-            series.volumes.sort((a,b) => a-b).forEach(v => {
+            
+            // เรียงเลขเล่มจากน้อยไปมาก
+            const sortedVols = [...series.volumes].sort((a, b) => parseFloat(a) - parseFloat(b));
+            
+            sortedVols.forEach(v => {
                 html += `<span class="vol-tag">เล่มที่ ${v}</span>`;
             });
+            
             html += `</div>
                 <button onclick="deleteSeries(${index})" class="del-btn">Delete Entire Series</button>
             </div>`;
@@ -107,49 +123,93 @@
             displayLibrary();
         }
 
-        // --- ระบบจัดการข้อมูล ---
+        function filterBooks(cat) {
+            document.getElementById('list-title').innerHTML = `<h3>Category: ${cat}</h3>`;
+            displayLibrary(myLibrary.filter(s => s.category === cat));
+        }
+
+        // --- 3. ระบบจัดการข้อมูล (Data Management) ---
         function addBook() {
             const title = document.getElementById('new-title').value.trim();
             const vol = document.getElementById('new-vol').value.trim();
             const category = document.getElementById('new-category').value;
 
-            if (!title || !vol) return alert("Please fill all fields");
+            if (!title || !vol) return alert("กรุณากรอกชื่อเรื่องและเล่มที่");
 
             let series = myLibrary.find(s => s.title.toLowerCase() === title.toLowerCase());
             if (series) {
-                if (!series.volumes.includes(vol)) series.volumes.push(vol);
+                if (!series.volumes.includes(vol)) {
+                    series.volumes.push(vol);
+                } else {
+                    alert("คุณมีเล่มนี้อยู่แล้ว!");
+                    return;
+                }
             } else {
                 myLibrary.push({ title, category, volumes: [vol] });
             }
 
             localStorage.setItem('myLibrary', JSON.stringify(myLibrary));
-            location.reload();
+            document.getElementById('new-title').value = '';
+            document.getElementById('new-vol').value = '';
+            showAllSeries();
         }
 
         function deleteSeries(index) {
-            if(confirm("Delete this series?")) {
+            if(confirm("ยืนยันการลบทั้งซีรีส์?")) {
                 myLibrary.splice(index, 1);
                 localStorage.setItem('myLibrary', JSON.stringify(myLibrary));
                 showAllSeries();
             }
         }
 
-        function filterBooks(cat) {
-            document.getElementById('list-title').innerHTML = `<h3>Category: ${cat}</h3>`;
-            displayLibrary(myLibrary.filter(s => s.category === cat));
-        }
-
+        // --- 4. ระบบ Import / Export ---
         function exportToCSV() {
             let csv = "Title,Category,Volumes\n";
-            myLibrary.forEach(s => csv += `"${s.title}","${s.category}","${s.volumes.join('|')}"\n`);
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'my_books.csv';
-            a.click();
+            myLibrary.forEach(s => {
+                csv += `"${s.title}","${s.category}","${s.volumes.join('|')}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", "my_book_shelf_backup.csv");
+            link.click();
         }
 
+        function importFromCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const rows = text.split('\n');
+                
+                for (let i = 1; i < rows.length; i++) {
+                    const cols = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    if (cols.length < 3 || !cols[0].trim()) continue;
+
+                    const title = cols[0].replace(/^"|"$/g, '').trim();
+                    const category = cols[1].replace(/^"|"$/g, '').trim();
+                    const volumes = cols[2].replace(/^"|"$/g, '').trim().split('|');
+
+                    let existing = myLibrary.find(s => s.title.toLowerCase() === title.toLowerCase());
+                    if (existing) {
+                        volumes.forEach(v => {
+                            if (v && !existing.volumes.includes(v)) existing.volumes.push(v);
+                        });
+                    } else {
+                        myLibrary.push({ title, category, volumes: volumes.filter(v => v !== "") });
+                    }
+                }
+                localStorage.setItem('myLibrary', JSON.stringify(myLibrary));
+                alert("Import ข้อมูลสำเร็จ!");
+                location.reload();
+            };
+            reader.readAsText(file);
+        }
+
+        // เริ่มต้นแสดงผล
         displayLibrary();
     </script>
 </body>
