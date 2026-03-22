@@ -11,7 +11,7 @@
 
     <div id="login-overlay" class="auth-overlay">
         <div class="login-card">
-            <h2>🔐 Private Access</h2>
+            <h2 style="color: #1a73e8;">🔐 Private Access</h2>
             <input type="email" id="auth-email" placeholder="Email">
             <input type="password" id="auth-password" placeholder="Password">
             <button id="login-btn">Sign In</button>
@@ -21,7 +21,7 @@
     <div id="app-content" style="display:none;">
         <div class="top-nav">
             <div class="search-box">
-                <input type="text" id="search-input" placeholder="🔍 Search titles...">
+                <input type="text" id="search-input" placeholder="🔍 Search series title...">
             </div>
             <div class="user-controls">
                 <span id="display-user"></span>
@@ -40,7 +40,7 @@
                 <hr class="divider">
                 
                 <div class="admin-panel">
-                    <h3>➕ Add Book</h3>
+                    <h3>➕ Add New Book</h3>
                     <input type="text" id="new-title" placeholder="Series Title">
                     <input type="text" id="new-vol" placeholder="Volume #">
                     <select id="new-category">
@@ -54,7 +54,6 @@
 
             <div class="content">
                 <div id="back-btn" class="back-link">⬅ Back to List</div>
-                <div id="list-title"><h3>Your Collection</h3></div>
                 <div id="book-list">Loading...</div>
             </div>
         </div>
