@@ -17,6 +17,10 @@ document.getElementById('nav-ebook').addEventListener('click', () => filterBooks
 document.getElementById('search-input').addEventListener('input', searchBook);
 
 // --- Functions ---
+
+/**
+ * Checks if a user session exists on page load
+ */
 async function checkUser() {
     const { data: { user } } = await _supabase.auth.getUser();
     if (user) {
@@ -30,31 +34,59 @@ async function checkUser() {
     }
 }
 
+/**
+ * Handles User Login
+ */
 async function handleLogin() {
     const email = document.getElementById('auth-email').value;
     const password = document.getElementById('auth-password').value;
-    if(!email || !password) return alert("Please fill info");
+    if(!email || !password) return alert("Please enter email and password.");
     
     const { error } = await _supabase.auth.signInWithPassword({ email, password });
-    if (error) alert(error.message); else checkUser();
+    if (error) {
+        alert("Login failed: " + error.message);
+    } else {
+        checkUser();
+    }
 }
 
+/**
+ * Handles User Logout
+ */
 async function handleLogout() {
     await _supabase.auth.signOut();
     checkUser();
 }
 
+/**
+ * Fetches all books from the Supabase 'book' table
+ */
 async function fetchAllBooks() {
     const listDiv = document.getElementById('book-list');
-    listDiv.innerHTML = "Fetching...";
-    const { data, error } = await _supabase.from('book').select('*').order('title', { ascending: true });
-    if (!error) { myLibrary = data; displayLibrary(myLibrary); }
+    listDiv.innerHTML = "Fetching collection...";
+    
+    const { data, error } = await _supabase
+        .from('book')
+        .select('*')
+        .order('title', { ascending: true });
+
+    if (!error) {
+        myLibrary = data;
+        displayLibrary(myLibrary);
+    } else {
+        console.error("Fetch error:", error);
+        listDiv.innerHTML = "Error fetching data.";
+    }
 }
 
+/**
+ * Displays the library as a grid of series cards
+ */
 function displayLibrary(data) {
     currentDisplayData = data;
     const listDiv = document.getElementById('book-list');
     document.getElementById('back-btn').style.display = 'none';
+    document.getElementById('list-title').innerHTML = "<h3>Your Collection</h3>";
     
     let html = '<div class="grid-container">';
     data.forEach((series, index) => {
@@ -65,77 +97,134 @@ function displayLibrary(data) {
             </div>`;
     });
     html += '</div>';
-    listDiv.innerHTML = data.length > 0 ? html : '<p>Empty Collection</p>';
+    listDiv.innerHTML = data.length > 0 ? html : '<p style="text-align:center; color:#999;">No books found.</p>';
 }
 
+/**
+ * Shows the detailed volume list for a specific series
+ */
 function showDetail(index) {
     const series = currentDisplayData[index];
+    if (!series) return;
+
     const listDiv = document.getElementById('book-list');
     document.getElementById('back-btn').style.display = 'block';
+    document.getElementById('list-title').innerHTML = `<h3>${series.title}</h3>`;
     
-    const dateStr = series.last_updated ? new Date(series.last_updated).toLocaleDateString('th-TH') : 'N/A';
+    const dateStr = series.last_updated ? new Date(series.last_updated).toLocaleDateString('en-GB') : 'N/A';
 
     listDiv.innerHTML = `
         <div class="detail-view">
             <div class="detail-header">
                 <span>Category: <b>${series.category}</b></span>
-                <span style="color:#666">Updated: ${dateStr}</span>
+                <span style="color:#666">Last Updated: ${dateStr}</span>
             </div>
-            <input type="text" id="vol-search" placeholder="🔍 ค้นหาเล่ม..." 
-                oninput="filterVolTable('${series.id}')" class="inner-search">
-            <div id="vol-table-container">${renderVolTable(series.volumes)}</div>
-            <button onclick="deleteSeries(${series.id})" class="del-btn">Delete Series</button>
+            <div class="inner-search-wrapper">
+                <input type="text" id="vol-search" placeholder="🔍 Search volumes in this series..." 
+                    oninput="filterVolTable('${series.id}')" class="inner-search">
+            </div>
+            <div id="vol-table-container">
+                ${renderVolTable(series.volumes)}
+            </div>
+            <button onclick="deleteSeries(${series.id})" class="del-btn">Delete This Series</button>
         </div>
     `;
 }
 
+/**
+ * Renders the HTML table for volumes
+ */
 function renderVolTable(volumes, filter = '') {
-    const filtered = volumes.filter(v => v.includes(filter)).sort((a,b) => a-b);
-    let html = '<table class="vol-table"><thead><tr><th>Volume</th><th>Status</th></tr></thead><tbody>';
+    if (!volumes) return '<p>No volumes found.</p>';
+    
+    const filtered = volumes
+        .filter(v => v.includes(filter))
+        .sort((a, b) => parseFloat(a) - parseFloat(b));
+
+    if (filtered.length === 0) return '<p style="text-align:center; padding: 10px;">No matching volumes.</p>';
+
+    let html = '<table class="vol-table"><thead><tr><th>Volume Number</th><th>Status</th></tr></thead><tbody>';
     filtered.forEach(v => {
-        html += `<tr><td>เล่มที่ ${v}</td><td class="status-ok">✅ มีแล้ว</td></tr>`;
+        html += `<tr><td>Volume ${v}</td><td class="status-ok">✅ Owned</td></tr>`;
     });
     return html + '</tbody></table>';
 }
 
+/**
+ * Filters the volume table in real-time
+ */
 function filterVolTable(id) {
     const q = document.getElementById('vol-search').value;
     const series = myLibrary.find(s => s.id.toString() === id);
-    document.getElementById('vol-table-container').innerHTML = renderVolTable(series.volumes, q);
+    if (series) {
+        document.getElementById('vol-table-container').innerHTML = renderVolTable(series.volumes, q);
+    }
 }
 
+/**
+ * Adds a new book or updates an existing series with a new volume
+ */
 async function addBook() {
-    const title = document.getElementById('new-title').value;
-    const vol = document.getElementById('new-vol').value;
+    const title = document.getElementById('new-title').value.trim();
+    const vol = document.getElementById('new-vol').value.trim();
     const cat = document.getElementById('new-category').value;
-    if(!title || !vol) return;
+    
+    if(!title || !vol) return alert("Please enter a title and volume number.");
 
     const now = new Date().toISOString();
     let exist = myLibrary.find(s => s.title.toLowerCase() === title.toLowerCase());
 
     if(exist) {
         if(!exist.volumes.includes(vol)) {
-            await _supabase.from('book').update({ volumes: [...exist.volumes, vol], last_updated: now }).eq('id', exist.id);
+            const updatedVols = [...exist.volumes, vol];
+            await _supabase
+                .from('book')
+                .update({ volumes: updatedVols, last_updated: now })
+                .eq('id', exist.id);
+        } else {
+            alert("This volume is already in your collection.");
         }
     } else {
-        await _supabase.from('book').insert([{ title, category: cat, volumes: [vol], last_updated: now }]);
+        await _supabase
+            .from('book')
+            .insert([{ title, category: cat, volumes: [vol], last_updated: now }]);
     }
+
+    // Reset inputs and refresh
+    document.getElementById('new-title').value = '';
+    document.getElementById('new-vol').value = '';
     fetchAllBooks();
 }
 
+/**
+ * Deletes an entire series from the database
+ */
 async function deleteSeries(id) {
-    if(confirm("Delete?")) {
-        await _supabase.from('book').delete().eq('id', id);
-        fetchAllBooks();
+    if(confirm("Are you sure you want to delete this entire series? This cannot be undone.")) {
+        const { error } = await _supabase.from('book').delete().eq('id', id);
+        if(error) {
+            alert("Error deleting: " + error.message);
+        } else {
+            fetchAllBooks();
+        }
     }
 }
 
-function filterBooks(cat) { displayLibrary(myLibrary.filter(s => s.category === cat)); }
-
-function searchBook() {
-    const q = document.getElementById('search-input').value.toLowerCase();
-    displayLibrary(myLibrary.filter(s => s.title.toLowerCase().includes(q)));
+/**
+ * Filters the display by category
+ */
+function filterBooks(cat) {
+    displayLibrary(myLibrary.filter(s => s.category === cat));
 }
 
-// Start
+/**
+ * Search the main library list
+ */
+function searchBook() {
+    const q = document.getElementById('search-input').value.toLowerCase();
+    const filtered = myLibrary.filter(s => s.title.toLowerCase().includes(q));
+    displayLibrary(filtered);
+}
+
+// Initial session check
 checkUser();
