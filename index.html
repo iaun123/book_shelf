@@ -3,95 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Book Shelf - Local Storage</title>
+    <title>Book Shelf Pro - IAUN</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>📚 my book shelf (Offline)</h1>
-        
-        <div class="filter-container">
-            <button onclick="filterBooks('all')">All</button>
-            <button onclick="filterBooks('Comic')">Comic</button>
-            <button onclick="filterBooks('Novel')">Novel</button>
-            <button onclick="filterBooks('EBook')">E-Book</button>
+
+    <div class="top-nav">
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="🔍 ค้นหาชื่อหนังสือเพื่อเช็คเล่ม..." oninput="searchBook()">
+            <div id="search-result" class="search-status"></div>
+        </div>
+    </div>
+
+    <div class="main-wrapper">
+        <div class="sidebar">
+            <h2>MENU</h2>
+            <button onclick="showAllSeries()">🏠 All Series</button>
+            <button onclick="filterBooks('Comic')">📖 Comic</button>
+            <button onclick="filterBooks('Novel')">📕 Novel</button>
+            <button onclick="exportToCSV()" class="export-btn">📤 Export to CSV</button>
+            
+            <div class="admin-panel">
+                <h3>➕ Add Book</h3>
+                <input type="text" id="new-title" placeholder="ชื่อเรื่อง">
+                <input type="text" id="new-vol" placeholder="เล่มที่">
+                <select id="new-category">
+                    <option value="Comic">Comic</option>
+                    <option value="Novel">Novel</option>
+                </select>
+                <button onclick="addBook()">Save to Shelf</button>
+            </div>
         </div>
 
-        <div id="book-list">loading...</div>
-
-        <hr>
-
-        <div class="admin-panel">
-            <h3>📝 add new book</h3>
-            <input type="text" id="new-title" placeholder="ชื่อหนังสือ">
-            <input type="text" id="new-volume" placeholder="จำนวนเล่ม/เล่มที่">
-            <select id="new-category">
-                <option value="Comic">Comic</option>
-                <option value="Novel">Novel</option>
-                <option value="EBook">E-Book</option>
-            </select>
-            <button onclick="addBook()">➕ add to shelf</button>
+        <div class="content">
+            <div id="back-btn" class="back-link" onclick="showAllSeries()">⬅ Back to List</div>
+            <div id="list-title"><h3>All Series</h3></div>
+            <div id="book-list">Loading...</div>
         </div>
     </div>
 
     <script>
-        // ดึงข้อมูลจากความจำเครื่อง (LocalStorage)
-        let allBooks = JSON.parse(localStorage.getItem('myBooks')) || [];
+        let myLibrary = JSON.parse(localStorage.getItem('myLibrary')) || [];
 
-        function displayBooks(books) {
-            let html = '<ul>';
-            if (books.length === 0) {
-                html += '<p style="text-align:center; color:#999;">ยังไม่มีหนังสือในชั้นนี้</p>';
-            } else {
-                books.forEach((book, index) => {
-                    html += `
-                        <li class="book-item" style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <div class="book-title">${book.title}</div>
-                                <div class="book-detail">หมวด: ${book.category} | จำนวน: ${book.volume}</div>
-                            </div>
-                            <button onclick="deleteBook(${index})" style="background:none; border:none; color:red; cursor:pointer;">ลบ</button>
-                        </li>`;
-                });
+        // --- ระบบค้นหาและเช็คเล่ม (Search & Check) ---
+        function searchBook() {
+            const query = document.getElementById('search-input').value.trim().toLowerCase();
+            const resultDiv = document.getElementById('search-result');
+            
+            if (!query) {
+                resultDiv.innerHTML = "";
+                return;
             }
-            html += '</ul>';
-            document.getElementById('book-list').innerHTML = html;
+
+            // ค้นหาว่ามีเรื่องนี้ไหม
+            const foundSeries = myLibrary.find(s => s.title.toLowerCase().includes(query));
+            
+            if (foundSeries) {
+                resultDiv.innerHTML = `✅ Found: <b>${foundSeries.title}</b> (มีเล่ม: ${foundSeries.volumes.join(", ")})`;
+                resultDiv.style.color = "#27ae60";
+            } else {
+                resultDiv.innerHTML = `❌ You don't have this book yet.`;
+                resultDiv.style.color = "#e74c3c";
+            }
         }
 
+        // --- ระบบแสดงผลแบบ Series ---
+        function displayLibrary(data = myLibrary) {
+            const listDiv = document.getElementById('book-list');
+            document.getElementById('back-btn').style.display = 'none';
+            let html = '<div class="grid-container">';
+            
+            data.forEach((series, index) => {
+                html += `
+                    <div class="series-card" onclick="showDetail(${index})">
+                        <div class="card-title">${series.title}</div>
+                        <div class="card-info">${series.category} | ${series.volumes.length} Vols</div>
+                    </div>`;
+            });
+            html += '</div>';
+            listDiv.innerHTML = html;
+        }
+
+        function showDetail(index) {
+            const series = myLibrary[index];
+            const listDiv = document.getElementById('book-list');
+            document.getElementById('back-btn').style.display = 'block';
+            document.getElementById('list-title').innerHTML = `<h3>${series.title} Detail</h3>`;
+
+            let html = `<div class="detail-view">
+                <p>หมวดหมู่: ${series.category}</p>
+                <div class="vol-grid">`;
+            series.volumes.sort((a,b) => a-b).forEach(v => {
+                html += `<span class="vol-tag">เล่มที่ ${v}</span>`;
+            });
+            html += `</div>
+                <button onclick="deleteSeries(${index})" class="del-btn">Delete Entire Series</button>
+            </div>`;
+            listDiv.innerHTML = html;
+        }
+
+        function showAllSeries() {
+            document.getElementById('list-title').innerHTML = "<h3>All Series</h3>";
+            displayLibrary();
+        }
+
+        // --- ระบบจัดการข้อมูล ---
         function addBook() {
-            const title = document.getElementById('new-title').value;
-            const volume = document.getElementById('new-volume').value;
+            const title = document.getElementById('new-title').value.trim();
+            const vol = document.getElementById('new-vol').value.trim();
             const category = document.getElementById('new-category').value;
 
-            if (!title) return alert("ใส่ชื่อหนังสือด้วยครับ");
+            if (!title || !vol) return alert("Please fill all fields");
 
-            // เพิ่มข้อมูลลงใน Array
-            allBooks.push({ title, volume, category });
+            let series = myLibrary.find(s => s.title.toLowerCase() === title.toLowerCase());
+            if (series) {
+                if (!series.volumes.includes(vol)) series.volumes.push(vol);
+            } else {
+                myLibrary.push({ title, category, volumes: [vol] });
+            }
 
-            // เซฟลงความจำเครื่อง
-            localStorage.setItem('myBooks', JSON.stringify(allBooks));
-
-            // ล้างฟอร์มและแสดงผลใหม่
-            document.getElementById('new-title').value = '';
-            document.getElementById('new-volume').value = '';
-            displayBooks(allBooks);
+            localStorage.setItem('myLibrary', JSON.stringify(myLibrary));
+            location.reload();
         }
 
-        function deleteBook(index) {
-            if (confirm("ยืนยันการลบหนังสือเล่มนี้?")) {
-                allBooks.splice(index, 1);
-                localStorage.setItem('myBooks', JSON.stringify(allBooks));
-                displayBooks(allBooks);
+        function deleteSeries(index) {
+            if(confirm("Delete this series?")) {
+                myLibrary.splice(index, 1);
+                localStorage.setItem('myLibrary', JSON.stringify(myLibrary));
+                showAllSeries();
             }
         }
 
         function filterBooks(cat) {
-            if (cat === 'all') displayBooks(allBooks);
-            else displayBooks(allBooks.filter(book => book.category === cat));
+            document.getElementById('list-title').innerHTML = `<h3>Category: ${cat}</h3>`;
+            displayLibrary(myLibrary.filter(s => s.category === cat));
         }
 
-        // แสดงผลทันทีที่เปิดหน้าเว็บ
-        displayBooks(allBooks);
+        function exportToCSV() {
+            let csv = "Title,Category,Volumes\n";
+            myLibrary.forEach(s => csv += `"${s.title}","${s.category}","${s.volumes.join('|')}"\n`);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'my_books.csv';
+            a.click();
+        }
+
+        displayLibrary();
     </script>
 </body>
 </html>
