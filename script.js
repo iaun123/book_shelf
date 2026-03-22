@@ -4,16 +4,26 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let myLibrary = [];
 let currentDisplayData = [];
+let selectedStatus = 'yellow'; // Default Status
 
-// Event Listeners
+// --- Status Picker Logic ---
+document.querySelectorAll('.status-opt').forEach(opt => {
+    opt.addEventListener('click', function() {
+        document.querySelectorAll('.status-opt').forEach(el => el.classList.remove('active'));
+        this.classList.add('active');
+        selectedStatus = this.getAttribute('data-val');
+    });
+});
+
+// --- Event Listeners ---
 document.getElementById('login-btn').addEventListener('click', handleLogin);
-document.getElementById('logout-btn').addEventListener('click', handleLogout);
+document.getElementById('logout-btn').addEventListener('click', () => { _supabase.auth.signOut(); checkUser(); });
 document.getElementById('save-btn').addEventListener('click', addBook);
 document.getElementById('back-btn').addEventListener('click', fetchAllBooks);
 document.getElementById('nav-all').addEventListener('click', fetchAllBooks);
 document.getElementById('nav-comic').addEventListener('click', () => filterBooks('Comic'));
 document.getElementById('nav-novel').addEventListener('click', () => filterBooks('Novel'));
-document.getElementById('nav-ebook').addEventListener('click', () => filterBooks('EBook'));
+document.getElementById('nav-ebook').addEventListener('click', () => filterBooks('E-Book'));
 document.getElementById('search-input').addEventListener('input', searchBook);
 
 async function checkUser() {
@@ -36,11 +46,7 @@ async function handleLogin() {
     if (error) alert(error.message); else checkUser();
 }
 
-async function handleLogout() { await _supabase.auth.signOut(); checkUser(); }
-
 async function fetchAllBooks() {
-    const listDiv = document.getElementById('book-list');
-    listDiv.innerHTML = "Fetching...";
     const { data, error } = await _supabase.from('book').select('*').order('title', { ascending: true });
     if (!error) { myLibrary = data; displayLibrary(myLibrary); }
 }
@@ -52,9 +58,9 @@ function displayLibrary(data) {
     
     let html = '<div class="grid-container">';
     data.forEach((series, index) => {
-        // Handle Status Badge
-        const statusLabel = series.status === 'end' ? 'COMPLETED' : 'ONGOING';
-        const statusClass = series.status === 'end' ? 'status-end' : 'status-ongoing';
+        let statusLabel = 'ONGOING', statusClass = 'status-yellow';
+        if (series.status === 'green' || series.status === 'end') { statusLabel = 'DONE'; statusClass = 'status-green'; }
+        else if (series.status === 'red') { statusLabel = 'STOP'; statusClass = 'status-red'; }
 
         html += `
             <div class="series-card" onclick="showDetail(${index})">
@@ -64,7 +70,7 @@ function displayLibrary(data) {
             </div>`;
     });
     html += '</div>';
-    listDiv.innerHTML = data.length > 0 ? html : '<p>Empty Collection</p>';
+    listDiv.innerHTML = data.length > 0 ? html : '<p>No series found.</p>';
 }
 
 function showDetail(index) {
@@ -72,59 +78,34 @@ function showDetail(index) {
     const listDiv = document.getElementById('book-list');
     document.getElementById('back-btn').style.display = 'block';
     
-    const dateStr = series.last_updated ? new Date(series.last_updated).toLocaleDateString('en-GB') : 'N/A';
-    const statusText = series.status === 'end' ? 'Completed Collection' : 'Still Collecting';
-
     listDiv.innerHTML = `
-        <div class="detail-view">
-            <div class="detail-header">
-                <div>
-                    <b>Category:</b> ${series.category} | <b>Status:</b> ${statusText}
-                </div>
-                <div style="color:#666; font-size: 0.8rem;">Last Updated: ${dateStr}</div>
-            </div>
-            <input type="text" id="vol-search" placeholder="🔍 Search volumes..." oninput="filterVolTable('${series.id}')" class="inner-search" style="width:100%; padding:10px; margin: 15px 0; border: 1px solid #ddd; border-radius: 8px;">
-            <div id="vol-table-container">${renderVolTable(series.volumes)}</div>
-            <button onclick="deleteSeries(${series.id})" class="del-btn" style="background:#dc3545; color:white; border:none; padding:10px; width:100%; border-radius:8px; margin-top:20px; cursor:pointer;">Delete Series</button>
+        <div style="background:#fff; padding:30px; border-radius:12px; border:1px solid #ddd;">
+            <h2>${series.title}</h2>
+            <p>Category: ${series.category} | Status: ${series.status || 'Ongoing'}</p>
+            <table class="vol-table">
+                <thead><tr><th>Volume</th><th>Status</th></tr></thead>
+                <tbody>${series.volumes.map(v => `<tr><td>Volume ${v}</td><td>✅ Owned</td></tr>`).join('')}</tbody>
+            </table>
+            <button onclick="deleteSeries(${series.id})" style="margin-top:20px; background:#dc3545; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer; width:100%;">Delete Series</button>
         </div>
     `;
-}
-
-function renderVolTable(volumes, filter = '') {
-    const filtered = volumes.filter(v => v.includes(filter)).sort((a,b) => parseFloat(a)-parseFloat(b));
-    let html = '<table class="vol-table"><thead><tr><th>Volume</th><th>Status</th></tr></thead><tbody>';
-    filtered.forEach(v => { html += `<tr><td>Volume ${v}</td><td class="status-ok">✅ Owned</td></tr>`; });
-    return html + '</tbody></table>';
-}
-
-function filterVolTable(id) {
-    const q = document.getElementById('vol-search').value;
-    const series = myLibrary.find(s => s.id.toString() === id);
-    document.getElementById('vol-table-container').innerHTML = renderVolTable(series.volumes, q);
 }
 
 async function addBook() {
     const title = document.getElementById('new-title').value.trim();
     const vol = document.getElementById('new-vol').value.trim();
     const cat = document.getElementById('new-category').value;
-    const status = document.getElementById('new-status').value; // Get status value
-    
-    if(!title || !vol) return alert("Enter title and volume");
+    if(!title || !vol) return alert("Title and Volume required");
 
-    const now = new Date().toISOString();
     let exist = myLibrary.find(s => s.title.toLowerCase() === title.toLowerCase());
+    const now = new Date().toISOString();
 
     if(exist) {
-        if(!exist.volumes.includes(vol)) {
-            const updatedVols = [...exist.volumes, vol];
-            // Update volumes and also update status
-            await _supabase.from('book').update({ volumes: updatedVols, last_updated: now, status: status }).eq('id', exist.id);
-        } else {
-            // Even if volume exists, user might want to update status
-            await _supabase.from('book').update({ last_updated: now, status: status }).eq('id', exist.id);
-        }
+        let updatedVols = exist.volumes || [];
+        if(!updatedVols.includes(vol)) updatedVols.push(vol);
+        await _supabase.from('book').update({ volumes: updatedVols, status: selectedStatus, last_updated: now }).eq('id', exist.id);
     } else {
-        await _supabase.from('book').insert([{ title, category: cat, volumes: [vol], last_updated: now, status: status }]);
+        await _supabase.from('book').insert([{ title, category: cat, volumes: [vol], status: selectedStatus, last_updated: now }]);
     }
     fetchAllBooks();
 }
