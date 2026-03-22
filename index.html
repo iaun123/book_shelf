@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,7 +22,7 @@
     <div id="app-content" style="display:none;">
         <div class="top-nav">
             <div class="search-box">
-                <input type="text" id="search-input" placeholder="🔍 find the book...">
+                <input type="text" id="search-input" placeholder="🔍 Search titles...">
                 <div id="search-result" class="search-status"></div>
             </div>
             <div class="user-controls">
@@ -43,12 +43,16 @@
                 
                 <div class="admin-panel">
                     <h3>➕ Add New Book</h3>
-                    <input type="text" id="new-title" placeholder="name">
-                    <input type="text" id="new-vol" placeholder="volum">
+                    <input type="text" id="new-title" placeholder="Series Title">
+                    <input type="text" id="new-vol" placeholder="Volume #">
                     <select id="new-category">
                         <option value="Comic">Comic</option>
                         <option value="Novel">Novel</option>
-                        <option value="EBook">EBook</option>
+                        <option value="EBook">E-Book</option>
+                    </select>
+                    <select id="new-status">
+                        <option value="null">Reading (Ongoing)</option>
+                        <option value="end">Completed (End)</option>
                     </select>
                     <button id="save-btn">Save to Cloud</button>
                 </div>
