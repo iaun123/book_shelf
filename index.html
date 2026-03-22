@@ -21,11 +21,9 @@
             <button onclick="showAllSeries()">🏠 All Series</button>
             <button onclick="filterBooks('Comic')">📖 Comic</button>
             <button onclick="filterBooks('Novel')">📕 Novel</button>
-            
-            <hr style="border: 0.5px solid rgba(255,255,255,0.1); margin: 20px 0;">
+            <button onclick="filterBooks('EBook')">📱 E-Book</button> <hr style="border: 0.5px solid rgba(255,255,255,0.1); margin: 20px 0;">
             
             <button onclick="exportToCSV()" class="export-btn">📤 Export CSV</button>
-            
             <label for="import-csv" class="custom-file-upload">📥 Import CSV</label>
             <input type="file" id="import-csv" accept=".csv" onchange="importFromCSV(event)" style="display:none;">
             
@@ -36,8 +34,7 @@
                 <select id="new-category">
                     <option value="Comic">Comic</option>
                     <option value="Novel">Novel</option>
-                    <option value="EBook">E-Book</option>
-                </select>
+                    <option value="EBook">E-Book</option> </select>
                 <button onclick="addBook()" id="save-btn">Save to Shelf</button>
             </div>
         </div>
@@ -81,7 +78,7 @@
             let html = '<div class="grid-container">';
             
             if (data.length === 0) {
-                html = '<p style="color:#999; text-align:center; width:100%;">ไม่พบข้อมูลหนังสือ</p>';
+                html = '<p style="color:#999; text-align:center; width:100%;">not found that book</p>';
             } else {
                 data.forEach((series, index) => {
                     html += `
@@ -109,7 +106,7 @@
             const sortedVols = [...series.volumes].sort((a, b) => parseFloat(a) - parseFloat(b));
             
             sortedVols.forEach(v => {
-                html += `<span class="vol-tag">เล่มที่ ${v}</span>`;
+                html += `<span class="vol-tag">volum ${v}</span>`;
             });
             
             html += `</div>
@@ -124,8 +121,18 @@
         }
 
         function filterBooks(cat) {
-            document.getElementById('list-title').innerHTML = `<h3>Category: ${cat}</h3>`;
-            displayLibrary(myLibrary.filter(s => s.category === cat));
+            // เปลี่ยนหัวข้อหน้าให้ตรงตามหมวดที่เลือก
+            const titleMap = {
+                'Comic': 'Manga / Comic',
+                'Novel': 'Light Novel / Novel',
+                'EBook': 'E-Book Collection'
+            };
+            
+            document.getElementById('list-title').innerHTML = `<h3>Category: ${titleMap[cat] || cat}</h3>`;
+            
+            // กรองข้อมูลจาก allLibrary (หรือ myLibrary)
+            const filteredData = myLibrary.filter(series => series.category === cat);
+            displayLibrary(filteredData);
         }
 
         // --- 3. ระบบจัดการข้อมูล (Data Management) ---
@@ -134,14 +141,14 @@
             const vol = document.getElementById('new-vol').value.trim();
             const category = document.getElementById('new-category').value;
 
-            if (!title || !vol) return alert("กรุณากรอกชื่อเรื่องและเล่มที่");
+            if (!title || !vol) return alert("pls add name and volum");
 
             let series = myLibrary.find(s => s.title.toLowerCase() === title.toLowerCase());
             if (series) {
                 if (!series.volumes.includes(vol)) {
                     series.volumes.push(vol);
                 } else {
-                    alert("คุณมีเล่มนี้อยู่แล้ว!");
+                    alert("you have tht one!");
                     return;
                 }
             } else {
