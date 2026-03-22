@@ -1,67 +1,101 @@
 :root {
-    --bg-dark: #0f0f0f;
-    --sidebar-bg: #1a1a1a;
-    --accent: #4CAF50;
-    --text-main: #e0e0e0;
-    --card-bg: #242424;
+    --bg-light: #f4f7f9;        /* พื้นหลังหลัก (ขาวอมฟ้าอ่อน) */
+    --sidebar-bg: #ffffff;      /* พื้นหลัง Sidebar (ขาวสะอาด) */
+    --accent: #1a73e8;          /* สีฟ้าหลัก (Google Blue) */
+    --accent-hover: #1557b0;    /* สีฟ้าเวลา Hover */
+    --text-main: #333333;       /* สีตัวอักษรหลัก */
+    --text-sub: #666666;        /* สีตัวอักษรรอง */
+    --card-bg: #ffffff;         /* พื้นหลังการ์ด */
+    --border-color: #d1d9e0;    /* สีเส้นขอบ */
 }
 
 body {
-    margin: 0; font-family: 'Segoe UI', sans-serif;
-    background: var(--bg-dark); color: var(--text-main);
+    margin: 0; 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-light); 
+    color: var(--text-main);
+    overflow-x: hidden;
 }
 
+/* Auth Layout */
 .auth-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.9);
-    display: flex; align-items: center; justify-content: center; z-index: 1000;
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    background: rgba(255, 255, 255, 0.9); display:flex; align-items:center; justify-content:center; z-index:1000;
 }
-
 .login-card {
-    background: var(--card-bg); padding: 40px; border-radius: 15px; width: 320px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center;
+    background: var(--card-bg); padding: 40px; border-radius: 15px; width: 320px; text-align:center;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid var(--border-color);
 }
-
+.login-card h2 { color: var(--accent); }
 .login-card input {
-    width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px;
-    border: 1px solid #444; background: #111; color: white; box-sizing: border-box;
+    width: 100%; padding: 12px; margin-bottom: 15px; box-sizing: border-box;
+    border-radius: 8px; border: 1px solid var(--border-color); background: #fff; color: #333;
+}
+.login-card button {
+    width: 100%; padding: 12px; background: var(--accent); color: white;
+    border: none; border-radius: 8px; cursor: pointer; font-weight: bold;
 }
 
+/* Top Nav */
 .top-nav {
-    display: flex; justify-content: space-between; padding: 15px 30px;
-    background: var(--sidebar-bg); border-bottom: 1px solid #333;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 15px 30px; background: var(--sidebar-bg); border-bottom: 1px solid var(--border-color);
+}
+.search-box input {
+    padding: 8px 15px; border-radius: 20px; border: 1px solid var(--border-color); background: #f1f3f4; color: #333; width: 250px;
 }
 
+/* Layout */
 .main-wrapper { display: flex; min-height: calc(100vh - 70px); }
 
-.sidebar { width: 260px; background: var(--sidebar-bg); padding: 25px; border-right: 1px solid #333; }
-
+/* Sidebar */
+.sidebar { width: 260px; background: var(--sidebar-bg); padding: 25px; border-right: 1px solid var(--border-color); }
+.sidebar h2 { font-size: 1.2rem; margin-bottom: 25px; color: var(--accent); border-bottom: 2px solid var(--accent); display: inline-block; }
 .sidebar button {
-    display: block; width: 100%; padding: 12px; margin-bottom: 5px;
-    text-align: left; background: transparent; border: none; color: #aaa;
-    cursor: pointer; border-radius: 8px; transition: 0.2s;
+    display: block; width: 100%; padding: 12px; margin-bottom: 10px; text-align: left;
+    background: transparent; border: none; color: var(--text-sub); cursor: pointer; border-radius: 8px; font-weight: 500;
 }
+.sidebar button:hover { background: #e8f0fe; color: var(--accent); }
 
-.sidebar button:hover { background: #252525; color: white; }
+/* Admin Panel */
+.admin-panel input, .admin-panel select {
+    width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px;
+    border: 1px solid var(--border-color); background: #fff; color: #333; box-sizing: border-box;
+}
+#save-btn { background: var(--accent); border: none; padding: 12px; width: 100%; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; }
+#save-btn:hover { background: var(--accent-hover); }
 
+/* Content & Cards */
+.content { flex: 1; padding: 40px; }
 .grid-container {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px;
 }
-
 .series-card {
     background: var(--card-bg); padding: 20px; border-radius: 12px; cursor: pointer;
-    border: 1px solid #333; transition: 0.3s;
+    transition: all 0.2s; border: 1px solid var(--border-color);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.series-card:hover { transform: translateY(-5px); border-color: var(--accent); box-shadow: 0 5px 15px rgba(26, 115, 232, 0.2); }
+.card-title { font-weight: bold; margin-bottom: 8px; font-size: 1.1rem; color: var(--accent); }
+.card-info { font-size: 0.85rem; color: var(--text-sub); }
+
+/* Detail View & Table */
+.detail-view { background: var(--card-bg); padding: 30px; border-radius: 15px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+.vol-table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
+.vol-table th { background: #f8f9fa; padding: 12px; text-align: left; font-size: 0.85rem; color: var(--accent); border-bottom: 2px solid var(--accent); }
+.vol-table td { padding: 12px; border-bottom: 1px solid #eee; color: #444; }
+.status-ok { color: #28a745; font-weight: bold; text-align: right; }
+
+.inner-search-wrapper input {
+    width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: #f8f9fa; color: #333; margin-bottom: 15px;
 }
 
-.series-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+.del-btn { background: #dc3545; border: none; padding: 12px; color: white; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 20px; opacity: 0.8; }
+.del-btn:hover { opacity: 1; }
 
-/* Table Style */
-.vol-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-.vol-table th { background: #333; padding: 12px; text-align: left; color: var(--accent); }
-.vol-table td { padding: 12px; border-bottom: 1px solid #252525; }
-
-.status-ok { color: var(--accent); font-weight: bold; text-align: right; }
+.back-link { cursor: pointer; color: var(--accent); margin-bottom: 20px; font-weight: bold; }
 
 @media (max-width: 768px) {
     .main-wrapper { flex-direction: column; }
-    .sidebar { width: 100%; }
+    .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); }
 }
