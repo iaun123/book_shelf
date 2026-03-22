@@ -5,7 +5,7 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let myLibrary = [];
 let currentDisplayData = [];
 
-// Event Listeners
+// Events
 document.getElementById('login-btn').addEventListener('click', handleLogin);
 document.getElementById('logout-btn').addEventListener('click', () => { _supabase.auth.signOut(); checkUser(); });
 document.getElementById('save-btn').addEventListener('click', addBook);
@@ -48,19 +48,19 @@ function displayLibrary(data) {
     
     let html = '<div class="grid-container">';
     data.forEach((series, index) => {
-        let statusLabel = 'ONGOING', statusClass = 'status-yellow';
-        if (series.status === 'green' || series.status === 'end') { statusLabel = 'DONE'; statusClass = 'status-green'; }
-        else if (series.status === 'red') { statusLabel = 'STOP'; statusClass = 'status-red'; }
+        let label = 'ONGOING', cls = 'status-yellow';
+        if (series.status === 'green' || series.status === 'end') { label = 'DONE'; cls = 'status-green'; }
+        else if (series.status === 'red') { label = 'STOP'; cls = 'status-red'; }
 
         html += `
             <div class="series-card" onclick="showDetail(${index})">
                 <div class="card-title">${series.title}</div>
                 <div class="card-info">${series.category} | ${series.volumes ? series.volumes.length : 0} Vols</div>
-                <div class="status-badge ${statusClass}">${statusLabel}</div>
+                <div class="status-badge ${cls}">${label}</div>
             </div>`;
     });
     html += '</div>';
-    listDiv.innerHTML = data.length > 0 ? html : '<p>Empty Collection</p>';
+    listDiv.innerHTML = data.length > 0 ? html : '<p>No books found.</p>';
 }
 
 function showDetail(index) {
@@ -68,37 +68,39 @@ function showDetail(index) {
     const listDiv = document.getElementById('book-list');
     document.getElementById('back-btn').style.display = 'block';
     
-    // Status Logic for Detail View
-    const currentStatus = series.status || 'yellow';
+    const curStatus = series.status || 'yellow';
 
     listDiv.innerHTML = `
-        <div style="background:#fff; padding:25px; border-radius:12px; border:1px solid #ddd;">
-            <h2>${series.title}</h2>
+        <div style="background:#fff; padding:30px; border-radius:15px; border:1px solid #ddd; max-width: 800px;">
+            <h2 style="color:var(--accent); margin-top:0;">${series.title}</h2>
             <p style="color:#666;">Category: ${series.category}</p>
 
             <div class="status-toggle-container">
-                <div class="st-btn ${currentStatus==='yellow'?'active':''}" data-val="yellow" onclick="updateStatus(${series.id}, 'yellow')">ONGOING</div>
-                <div class="st-btn ${currentStatus==='green'||currentStatus==='end'?'active':''}" data-val="green" onclick="updateStatus(${series.id}, 'green')">DONE</div>
-                <div class="st-btn ${currentStatus==='red'?'active':''}" data-val="red" onclick="updateStatus(${series.id}, 'red')">STOP</div>
+                <div class="st-btn ${curStatus==='yellow'?'active':''}" data-val="yellow" onclick="updateStatus(${series.id}, 'yellow')">ONGOING</div>
+                <div class="st-btn ${curStatus==='green'||curStatus==='end'?'active':''}" data-val="green" onclick="updateStatus(${series.id}, 'green')">DONE</div>
+                <div class="st-btn ${curStatus==='red'?'active':''}" data-val="red" onclick="updateStatus(${series.id}, 'red')">STOP</div>
             </div>
 
-            <input type="text" id="vol-search" class="vol-search-input" placeholder="🔍 Find volume number..." oninput="filterVolTable('${series.id}')">
+            <input type="text" id="vol-search" class="vol-search-bar" placeholder="🔍 Find volume number (e.g. 5)..." oninput="filterVolTable('${series.id}')">
 
             <div id="vol-table-container">
                 ${renderVolTable(series.volumes)}
             </div>
 
-            <button onclick="deleteSeries(${series.id})" style="margin-top:30px; background:#fce8e6; color:#d93025; border:1px solid #d93025; padding:10px; width:100%; border-radius:6px; cursor:pointer;">Delete Entire Series</button>
+            <button onclick="deleteSeries(${series.id})" style="margin-top:30px; background:none; color:#d93025; border:none; cursor:pointer; font-size:0.8rem; text-decoration:underline;">Delete Entire Series</button>
         </div>
     `;
 }
 
 function renderVolTable(volumes, filter = '') {
-    const filtered = (volumes || []).filter(v => v.includes(filter)).sort((a,b) => parseFloat(a)-parseFloat(b));
-    if (filtered.length === 0) return '<p style="text-align:center; padding:20px; color:#999;">No volumes match your search.</p>';
-    
-    let html = '<table class="vol-table"><thead><tr><th>Volume</th><th>Status</th></tr></thead><tbody>';
-    filtered.forEach(v => { html += `<tr><td>Volume ${v}</td><td style="color:#28a745; font-weight:bold; text-align:right;">✅ Owned</td></tr>`; });
+    const vList = volumes || [];
+    const filtered = vList.filter(v => v.toString().includes(filter)).sort((a,b) => parseFloat(a)-parseFloat(b));
+    if(filtered.length === 0) return '<p style="color:#999; padding:20px; text-align:center;">No volumes found.</p>';
+
+    let html = '<table class="vol-table"><thead><tr><th>Volume Name / No.</th><th>Status</th></tr></thead><tbody>';
+    filtered.forEach(v => {
+        html += `<tr><td>Volume ${v}</td><td style="color:#1e8e3e; font-weight:bold; text-align:right;">✅ Owned</td></tr>`;
+    });
     return html + '</tbody></table>';
 }
 
@@ -111,10 +113,9 @@ function filterVolTable(id) {
 async function updateStatus(id, newStatus) {
     const { error } = await _supabase.from('book').update({ status: newStatus }).eq('id', id);
     if (!error) {
-        // Find in local array and update UI instantly
         const idx = myLibrary.findIndex(s => s.id === id);
         myLibrary[idx].status = newStatus;
-        showDetail(currentDisplayData.findIndex(s => s.id === id)); 
+        showDetail(currentDisplayData.findIndex(s => s.id === id));
     }
 }
 
@@ -122,23 +123,25 @@ async function addBook() {
     const title = document.getElementById('new-title').value.trim();
     const vol = document.getElementById('new-vol').value.trim();
     const cat = document.getElementById('new-category').value;
-    if(!title || !vol) return alert("Fill in title and volume");
+    if(!title || !vol) return alert("Title and Volume are required!");
 
     let exist = myLibrary.find(s => s.title.toLowerCase() === title.toLowerCase());
     const now = new Date().toISOString();
 
     if(exist) {
-        let updatedVols = exist.volumes || [];
-        if(!updatedVols.includes(vol)) updatedVols.push(vol);
-        await _supabase.from('book').update({ volumes: updatedVols, last_updated: now }).eq('id', exist.id);
+        let vList = exist.volumes || [];
+        if(!vList.includes(vol)) vList.push(vol);
+        await _supabase.from('book').update({ volumes: vList, last_updated: now }).eq('id', exist.id);
     } else {
         await _supabase.from('book').insert([{ title, category: cat, volumes: [vol], status: 'yellow', last_updated: now }]);
     }
     fetchAllBooks();
+    document.getElementById('new-title').value = '';
+    document.getElementById('new-vol').value = '';
 }
 
 async function deleteSeries(id) {
-    if(confirm("Are you sure? This will remove the whole series.")) {
+    if(confirm("Confirm to delete this series?")) {
         await _supabase.from('book').delete().eq('id', id);
         fetchAllBooks();
     }
