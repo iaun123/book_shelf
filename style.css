@@ -157,15 +157,20 @@ body {
 }
 .vol-grid {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column; 
+    gap: 8px;             
     margin: 20px 0;
+    max-height: 400px;    /* กำหนดความสูงสูงสุด (ปรับได้ตามชอบ) */
+    overflow-y: auto;     /* ถ้าเกินความสูงที่กำหนด ให้เกิด Scroll bar เฉพาะในส่วนนี้ */
+    padding-right: 10px;  /* เว้นที่ให้ Scroll bar เล็กน้อย */
 }
 .vol-tag {
+    display: block;        
     background: #e0e6ed;
-    padding: 8px 15px;
-    margin: 5px;
-    border-radius: 20px;
-    font-size: 0.85rem;
+    padding: 10px 20px;
+    border-radius: 8px;   
+    font-size: 0.9rem;
+    width: fit-content;    
 }
 .del-btn {
     background: transparent;
