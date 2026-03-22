@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Book Shelf Pro - IAUN</title>
+    <title>Book Shelf Cloud - IAUN</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -18,17 +19,12 @@
     <div class="main-wrapper">
         <div class="sidebar">
             <h2>MENU</h2>
-            <button onclick="showAllSeries()">🏠 All Series</button>
+            <button onclick="fetchAllBooks()">🏠 All Series</button>
             <button onclick="filterBooks('Comic')">📖 Comic</button>
             <button onclick="filterBooks('Novel')">📕 Novel</button>
             <button onclick="filterBooks('EBook')">📱 E-Book</button>
             
             <hr style="border: 0.5px solid rgba(255,255,255,0.1); margin: 20px 0;">
-            
-            <button onclick="exportToCSV()" class="export-btn">📤 Export CSV</button>
-            
-            <label for="import-csv" class="custom-file-upload">📥 Import CSV</label>
-            <input type="file" id="import-csv" accept=".csv" onchange="importFromCSV(event)" style="display:none;">
             
             <div class="admin-panel">
                 <h3>➕ Add New Book</h3>
@@ -37,57 +33,64 @@
                 <select id="new-category">
                     <option value="Comic">Comic</option>
                     <option value="Novel">Novel</option>
-                    <option value="EBook">E-Book</option>
+                    <option value="EBook">EBook</option>
                 </select>
-                <button onclick="addBook()" id="save-btn">Save to Shelf</button>
+                <button onclick="addBook()" id="save-btn">Save to Cloud</button>
             </div>
         </div>
 
         <div class="content">
-            <div id="back-btn" class="back-link" onclick="showAllSeries()">⬅ Back to List</div>
-            <div id="list-title"><h3>All Series</h3></div>
-            <div id="book-list">Loading...</div>
+            <div id="back-btn" class="back-link" onclick="fetchAllBooks()">⬅ Back to List</div>
+            <div id="list-title"><h3>All Series (Cloud)</h3></div>
+            <div id="book-list">Loading from Supabase...</div>
         </div>
     </div>
 
     <script>
-        let myLibrary = JSON.parse(localStorage.getItem('myLibrary')) || [];
-        let currentDisplayData = []; // ตัวแปรสำคัญเพื่อแก้บั๊กคลิกแล้วแสดงผิดเรื่อง
+        // ตั้งค่าการเชื่อมต่อ
+        const SUPABASE_URL = 'https://iesaxrdexywsegppjbxo.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_9Rxgo8i46-CxS5-vRHmIUQ_fiqTQn1T';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        function searchBook() {
-            const query = document.getElementById('search-input').value.trim().toLowerCase();
-            const resultDiv = document.getElementById('search-result');
-            
-            if (!query) {
-                resultDiv.innerHTML = "";
+        let myLibrary = [];
+        let currentDisplayData = [];
+
+        // ดึงข้อมูลทั้งหมดจาก Supabase
+        async function fetchAllBooks() {
+            const listDiv = document.getElementById('book-list');
+            listDiv.innerHTML = "Fetching data...";
+
+            const { data, error } = await _supabase
+                .from('books')
+                .select('*')
+                .order('title', { ascending: true });
+
+            if (error) {
+                console.error('Error:', error);
+                listDiv.innerHTML = "Error loading data.";
                 return;
             }
 
-            const foundSeries = myLibrary.find(s => s.title.toLowerCase().includes(query));
-            
-            if (foundSeries) {
-                resultDiv.innerHTML = `✅ Found: <b>${foundSeries.title}</b> (มีเล่ม: ${foundSeries.volumes.join(", ")})`;
-                resultDiv.style.color = "#27ae60";
-            } else {
-                resultDiv.innerHTML = `❌ You don't have this book yet.`;
-                resultDiv.style.color = "#e74c3c";
-            }
+            myLibrary = data;
+            document.getElementById('list-title').innerHTML = "<h3>All Series (Cloud)</h3>";
+            displayLibrary(myLibrary);
         }
 
-        function displayLibrary(data = myLibrary) {
-            currentDisplayData = data; // อัปเดตข้อมูลที่โชว์อยู่ปัจจุบัน
+        function displayLibrary(data) {
+            currentDisplayData = data;
             const listDiv = document.getElementById('book-list');
             document.getElementById('back-btn').style.display = 'none';
             let html = '<div class="grid-container">';
             
             if (data.length === 0) {
-                html = '<p style="color:#999; text-align:center; width:100%;">ไม่พบข้อมูลหนังสือในหมวดนี้</p>';
+                html = '<p style="color:#999; text-align:center; width:100%;">ไม่มีข้อมูลในหมวดนี้</p>';
             } else {
                 data.forEach((series, index) => {
+                    const volCount = series.volumes ? series.volumes.length : 0;
                     html += `
                         <div class="series-card" onclick="showDetail(${index})">
                             <div class="card-title">${series.title}</div>
-                            <div class="card-info">${series.category} | ${series.volumes.length} Vols</div>
+                            <div class="card-info">${series.category} | ${volCount} Vols</div>
                         </div>`;
                 });
             }
@@ -95,8 +98,41 @@
             listDiv.innerHTML = html;
         }
 
+        async function addBook() {
+            const titleInput = document.getElementById('new-title');
+            const volInput = document.getElementById('new-vol');
+            const category = document.getElementById('new-category').value;
+            const title = titleInput.value.trim();
+            const vol = volInput.value.trim();
+
+            if (!title || !vol) return alert("Please fill all fields");
+
+            // เช็คว่ามีเรื่องนี้อยู่แล้วไหม
+            let existing = myLibrary.find(s => s.title.toLowerCase() === title.toLowerCase());
+
+            if (existing) {
+                if (!existing.volumes.includes(vol)) {
+                    const updatedVols = [...existing.volumes, vol];
+                    await _supabase
+                        .from('books')
+                        .update({ volumes: updatedVols })
+                        .eq('id', existing.id);
+                } else {
+                    alert("Volume already exists!");
+                }
+            } else {
+                await _supabase
+                    .from('books')
+                    .insert([{ title, category, volumes: [vol] }]);
+            }
+
+            titleInput.value = '';
+            volInput.value = '';
+            fetchAllBooks();
+        }
+
         function showDetail(index) {
-            const series = currentDisplayData[index]; // ดึงจากข้อมูลที่กรองอยู่ ไม่ใช่ myLibrary ทั้งหมด
+            const series = currentDisplayData[index];
             if (!series) return;
 
             const listDiv = document.getElementById('book-list');
@@ -104,114 +140,50 @@
             document.getElementById('list-title').innerHTML = `<h3>${series.title} Detail</h3>`;
 
             let html = `<div class="detail-view">
-                <p>หมวดหมู่: <b>${series.category}</b></p>
+                <p>Category: <b>${series.category}</b></p>
                 <div class="vol-grid">`;
             
             const sortedVols = [...series.volumes].sort((a, b) => parseFloat(a) - parseFloat(b));
-            
             sortedVols.forEach(v => {
                 html += `<span class="vol-tag">เล่มที่ ${v}</span>`;
             });
             
-            // ค้นหาตำแหน่งจริงๆ ใน myLibrary เพื่อให้ลบได้ถูกต้อง
-            const actualIndex = myLibrary.findIndex(s => s.title === series.title);
             html += `</div>
-                <button onclick="deleteSeries(${actualIndex})" class="del-btn">Delete Entire Series</button>
+                <button onclick="deleteSeries(${series.id})" class="del-btn">Delete Entire Series</button>
             </div>`;
             listDiv.innerHTML = html;
         }
 
-        function showAllSeries() {
-            document.getElementById('list-title').innerHTML = "<h3>All Series</h3>";
-            displayLibrary(myLibrary);
+        async function deleteSeries(id) {
+            if(confirm("Are you sure you want to delete this series from Cloud?")) {
+                await _supabase.from('books').delete().eq('id', id);
+                fetchAllBooks();
+            }
         }
 
         function filterBooks(cat) {
-            const titleMap = { 'Comic': 'Comic', 'Novel': 'Novel', 'EBook': 'E-Book' };
-            document.getElementById('list-title').innerHTML = `<h3>Category: ${titleMap[cat] || cat}</h3>`;
+            document.getElementById('list-title').innerHTML = `<h3>Category: ${cat}</h3>`;
             const filtered = myLibrary.filter(s => s.category === cat);
             displayLibrary(filtered);
         }
 
-        function addBook() {
-            const title = document.getElementById('new-title').value.trim();
-            const vol = document.getElementById('new-vol').value.trim();
-            const category = document.getElementById('new-category').value;
+        function searchBook() {
+            const query = document.getElementById('search-input').value.trim().toLowerCase();
+            const resultDiv = document.getElementById('search-result');
+            if (!query) { resultDiv.innerHTML = ""; return; }
 
-            if (!title || !vol) return alert("Please fill title and volume");
-
-            let series = myLibrary.find(s => s.title.toLowerCase() === title.toLowerCase());
-            if (series) {
-                if (!series.volumes.includes(vol)) {
-                    series.volumes.push(vol);
-                } else {
-                    alert("You already have this volume!");
-                    return;
-                }
+            const found = myLibrary.find(s => s.title.toLowerCase().includes(query));
+            if (found) {
+                resultDiv.innerHTML = `✅ Found: <b>${found.title}</b> (Vols: ${found.volumes.join(", ")})`;
+                resultDiv.style.color = "#27ae60";
             } else {
-                myLibrary.push({ title, category, volumes: [vol] });
-            }
-
-            localStorage.setItem('myLibrary', JSON.stringify(myLibrary));
-            document.getElementById('new-title').value = '';
-            document.getElementById('new-vol').value = '';
-            showAllSeries();
-        }
-
-        function deleteSeries(index) {
-            if(confirm("Delete this entire series?")) {
-                myLibrary.splice(index, 1);
-                localStorage.setItem('myLibrary', JSON.stringify(myLibrary));
-                showAllSeries();
+                resultDiv.innerHTML = `❌ Not found.`;
+                resultDiv.style.color = "#e74c3c";
             }
         }
 
-        function exportToCSV() {
-            let csv = "Title,Category,Volumes\n";
-            myLibrary.forEach(s => {
-                csv += `"${s.title}","${s.category}","${s.volumes.join('|')}"\n`;
-            });
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.setAttribute("href", url);
-            link.setAttribute("download", "my_book_shelf.csv");
-            link.click();
-        }
-
-        function importFromCSV(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const text = e.target.result;
-                const rows = text.split('\n');
-                for (let i = 1; i < rows.length; i++) {
-                    const cols = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    if (cols.length < 3 || !cols[0].trim()) continue;
-
-                    const title = cols[0].replace(/^"|"$/g, '').trim();
-                    const category = cols[1].replace(/^"|"$/g, '').trim();
-                    const volumes = cols[2].replace(/^"|"$/g, '').trim().split('|');
-
-                    let existing = myLibrary.find(s => s.title.toLowerCase() === title.toLowerCase());
-                    if (existing) {
-                        volumes.forEach(v => {
-                            if (v && !existing.volumes.includes(v)) existing.volumes.push(v);
-                        });
-                    } else {
-                        myLibrary.push({ title, category, volumes: volumes.filter(v => v !== "") });
-                    }
-                }
-                localStorage.setItem('myLibrary', JSON.stringify(myLibrary));
-                alert("Import Success!");
-                location.reload();
-            };
-            reader.readAsText(file);
-        }
-
-        displayLibrary();
+        // เริ่มโหลดข้อมูลทันทีที่เปิดหน้าเว็บ
+        fetchAllBooks();
     </script>
 </body>
 </html>
