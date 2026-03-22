@@ -12,34 +12,34 @@
     <div id="login-overlay" class="auth-overlay">
         <div class="login-card">
             <h2>🔐 Private Access</h2>
-            <p>กรุณาเข้าสู่ระบบเพื่อจัดการชั้นหนังสือ</p>
-            <input type="email" id="auth-email" placeholder="Email" onkeypress="if(event.key === 'Enter') handleLogin()">
-            <input type="password" id="auth-password" placeholder="Password" onkeypress="if(event.key === 'Enter') handleLogin()">
-            <button onclick="handleLogin()" id="login-btn">Sign In</button>
+            <p>Please login to your book shelf</p>
+            <input type="email" id="auth-email" placeholder="Email">
+            <input type="password" id="auth-password" placeholder="Password">
+            <button id="login-btn">Sign In</button>
         </div>
     </div>
 
     <div id="app-content" style="display:none;">
         <div class="top-nav">
             <div class="search-box">
-                <input type="text" id="search-input" placeholder="🔍 ค้นหาชื่อเรื่อง..." oninput="searchBook()">
+                <input type="text" id="search-input" placeholder="🔍 ค้นหาชื่อเรื่อง...">
                 <div id="search-result" class="search-status"></div>
             </div>
             <div class="user-controls">
-                <span id="display-user" style="margin-right: 15px; font-size: 0.9em; opacity: 0.8;"></span>
-                <button onclick="handleLogout()" class="logout-btn-top">Logout</button>
+                <span id="display-user"></span>
+                <button id="logout-btn" class="logout-btn-top">Logout</button>
             </div>
         </div>
 
         <div class="main-wrapper">
             <div class="sidebar">
                 <h2>MENU</h2>
-                <button onclick="fetchAllBooks()">🏠 All Series</button>
-                <button onclick="filterBooks('Comic')">📖 Comic</button>
-                <button onclick="filterBooks('Novel')">📕 Novel</button>
-                <button onclick="filterBooks('EBook')">📱 E-Book</button>
+                <button id="nav-all">🏠 All Series</button>
+                <button id="nav-comic">📖 Comic</button>
+                <button id="nav-novel">📕 Novel</button>
+                <button id="nav-ebook">📱 E-Book</button>
                 
-                <hr style="border: 0.5px solid rgba(255,255,255,0.1); margin: 20px 0;">
+                <hr class="divider">
                 
                 <div class="admin-panel">
                     <h3>➕ Add New Book</h3>
@@ -50,174 +50,18 @@
                         <option value="Novel">Novel</option>
                         <option value="EBook">EBook</option>
                     </select>
-                    <button onclick="addBook()" id="save-btn">Save to Cloud</button>
+                    <button id="save-btn">Save to Cloud</button>
                 </div>
             </div>
 
             <div class="content">
-                <div id="back-btn" class="back-link" onclick="fetchAllBooks()">⬅ Back to List</div>
+                <div id="back-btn" class="back-link">⬅ Back to List</div>
                 <div id="list-title"><h3>Your Collection</h3></div>
                 <div id="book-list">Loading...</div>
             </div>
         </div>
     </div>
 
-    <script>
-        // --- ⚙️ การตั้งค่า Supabase ---
-        const SUPABASE_URL = 'https://iesaxrdexywsegppjbxo.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_9Rxgo8i46-CxS5-vRHmIUQ_fiqTQn1T';
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        let myLibrary = [];
-        let currentDisplayData = [];
-
-        // --- 🔐 ระบบ Authentication ---
-        async function checkUser() {
-            const { data: { user } } = await _supabase.auth.getUser();
-            if (user) {
-                document.getElementById('login-overlay').style.display = 'none';
-                document.getElementById('app-content').style.display = 'block';
-                document.getElementById('display-user').innerText = user.email;
-                fetchAllBooks();
-            } else {
-                document.getElementById('login-overlay').style.display = 'flex';
-                document.getElementById('app-content').style.display = 'none';
-            }
-        }
-
-        async function handleLogin() {
-            const email = document.getElementById('auth-email').value;
-            const password = document.getElementById('auth-password').value;
-            const btn = document.getElementById('login-btn');
-            
-            if(!email || !password) return alert("กรุณากรอกให้ครบ");
-            
-            btn.innerText = "Checking...";
-            const { error } = await _supabase.auth.signInWithPassword({ email, password });
-
-            if (error) {
-                alert("Login Error: " + error.message);
-                btn.innerText = "Sign In";
-            } else {
-                checkUser();
-            }
-        }
-
-        async function handleLogout() {
-            await _supabase.auth.signOut();
-            checkUser();
-        }
-
-        // --- 📥 จัดการข้อมูลตาราง 'book' ---
-        async function fetchAllBooks() {
-            const listDiv = document.getElementById('book-list');
-            listDiv.innerHTML = "Loading...";
-
-            const { data, error } = await _supabase
-                .from('book')
-                .select('*')
-                .order('title', { ascending: true });
-
-            if (!error) {
-                myLibrary = data;
-                displayLibrary(myLibrary);
-            } else {
-                console.error(error);
-                listDiv.innerHTML = "Error fetching data.";
-            }
-        }
-
-        function displayLibrary(data) {
-            currentDisplayData = data;
-            const listDiv = document.getElementById('book-list');
-            document.getElementById('back-btn').style.display = 'none';
-            document.getElementById('list-title').innerHTML = "<h3>Your Collection</h3>";
-            
-            let html = '<div class="grid-container">';
-            data.forEach((series, index) => {
-                html += `
-                    <div class="series-card" onclick="showDetail(${index})">
-                        <div class="card-title">${series.title}</div>
-                        <div class="card-info">${series.category} | ${series.volumes ? series.volumes.length : 0} Vols</div>
-                    </div>`;
-            });
-            html += '</div>';
-            listDiv.innerHTML = data.length > 0 ? html : '<p style="text-align:center; color:#999; margin-top:20px;">ยังไม่มีหนังสือในชั้นนี้</p>';
-        }
-
-        function showDetail(index) {
-            const series = currentDisplayData[index];
-            if (!series) return;
-            const listDiv = document.getElementById('book-list');
-            document.getElementById('back-btn').style.display = 'block';
-            document.getElementById('list-title').innerHTML = `<h3>${series.title}</h3>`;
-            
-            let html = `<div class="detail-view">
-                <p>Category: <b>${series.category}</b></p>
-                <div class="vol-grid">`;
-            
-            // เรียงลำดับตัวเลขเล่ม
-            const sortedVols = [...series.volumes].sort((a, b) => parseFloat(a) - parseFloat(b));
-            sortedVols.forEach(v => { 
-                html += `<span class="vol-tag">เล่มที่ ${v}</span>`; 
-            });
-            
-            html += `</div>
-                <button onclick="deleteSeries(${series.id})" class="del-btn" style="margin-top:30px;">ลบหนังสือชุดนี้</button>
-            </div>`;
-            listDiv.innerHTML = html;
-        }
-
-        async function addBook() {
-            const title = document.getElementById('new-title').value.trim();
-            const vol = document.getElementById('new-vol').value.trim();
-            const category = document.getElementById('new-category').value;
-            
-            if (!title || !vol) return alert("กรุณากรอกชื่อเรื่องและเลขเล่ม");
-
-            // เช็คว่ามีเรื่องนี้อยู่แล้วหรือไม่
-            let existing = myLibrary.find(s => s.title.toLowerCase() === title.toLowerCase());
-            
-            if (existing) {
-                if (!existing.volumes.includes(vol)) {
-                    const newVols = [...existing.volumes, vol];
-                    await _supabase.from('book').update({ volumes: newVols }).eq('id', existing.id);
-                } else {
-                    alert("มีเล่มนี้อยู่แล้วในระบบ");
-                }
-            } else {
-                // เพิ่มใหม่ (user_id จะถูกใส่ให้อัตโนมัติจาก Default Value ใน DB)
-                await _supabase.from('book').insert([{ title, category, volumes: [vol] }]);
-            }
-            
-            document.getElementById('new-title').value = '';
-            document.getElementById('new-vol').value = '';
-            fetchAllBooks();
-        }
-
-        async function deleteSeries(id) {
-            if(confirm("ยืนยันการลบข้อมูลนี้ออกจาก Cloud?")) {
-                const { error } = await _supabase.from('book').delete().eq('id', id);
-                if(error) alert(error.message);
-                fetchAllBooks();
-            }
-        }
-
-        function filterBooks(cat) {
-            displayLibrary(myLibrary.filter(s => s.category === cat));
-        }
-
-        function searchBook() {
-            const query = document.getElementById('search-input').value.toLowerCase();
-            const res = document.getElementById('search-result');
-            if(!query) { res.innerHTML = ""; return; }
-            
-            const found = myLibrary.find(s => s.title.toLowerCase().includes(query));
-            res.innerHTML = found ? `✅ พบเรื่องนี้: ${found.title}` : `❌ ยังไม่มีเรื่องนี้`;
-        }
-
-        // เริ่มต้นตรวจสอบสถานะการ Login
-        checkUser();
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
