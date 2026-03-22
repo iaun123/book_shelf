@@ -21,9 +21,12 @@
             <button onclick="showAllSeries()">🏠 All Series</button>
             <button onclick="filterBooks('Comic')">📖 Comic</button>
             <button onclick="filterBooks('Novel')">📕 Novel</button>
-            <button onclick="filterBooks('EBook')">📱 E-Book</button> <hr style="border: 0.5px solid rgba(255,255,255,0.1); margin: 20px 0;">
+            <button onclick="filterBooks('EBook')">📱 E-Book</button>
+            
+            <hr style="border: 0.5px solid rgba(255,255,255,0.1); margin: 20px 0;">
             
             <button onclick="exportToCSV()" class="export-btn">📤 Export CSV</button>
+            
             <label for="import-csv" class="custom-file-upload">📥 Import CSV</label>
             <input type="file" id="import-csv" accept=".csv" onchange="importFromCSV(event)" style="display:none;">
             
@@ -34,7 +37,8 @@
                 <select id="new-category">
                     <option value="Comic">Comic</option>
                     <option value="Novel">Novel</option>
-                    <option value="EBook">E-Book</option> </select>
+                    <option value="EBook">E-Book</option>
+                </select>
                 <button onclick="addBook()" id="save-btn">Save to Shelf</button>
             </div>
         </div>
@@ -47,10 +51,9 @@
     </div>
 
     <script>
-        // โหลดข้อมูลจาก LocalStorage
         let myLibrary = JSON.parse(localStorage.getItem('myLibrary')) || [];
+        let currentDisplayData = []; // ตัวแปรสำคัญเพื่อแก้บั๊กคลิกแล้วแสดงผิดเรื่อง
 
-        // --- 1. ระบบค้นหา (Search & Check) ---
         function searchBook() {
             const query = document.getElementById('search-input').value.trim().toLowerCase();
             const resultDiv = document.getElementById('search-result');
@@ -71,14 +74,14 @@
             }
         }
 
-        // --- 2. ระบบแสดงผล (Display Logic) ---
         function displayLibrary(data = myLibrary) {
+            currentDisplayData = data; // อัปเดตข้อมูลที่โชว์อยู่ปัจจุบัน
             const listDiv = document.getElementById('book-list');
             document.getElementById('back-btn').style.display = 'none';
             let html = '<div class="grid-container">';
             
             if (data.length === 0) {
-                html = '<p style="color:#999; text-align:center; width:100%;">not found that book</p>';
+                html = '<p style="color:#999; text-align:center; width:100%;">ไม่พบข้อมูลหนังสือในหมวดนี้</p>';
             } else {
                 data.forEach((series, index) => {
                     html += `
@@ -93,7 +96,9 @@
         }
 
         function showDetail(index) {
-            const series = myLibrary[index];
+            const series = currentDisplayData[index]; // ดึงจากข้อมูลที่กรองอยู่ ไม่ใช่ myLibrary ทั้งหมด
+            if (!series) return;
+
             const listDiv = document.getElementById('book-list');
             document.getElementById('back-btn').style.display = 'block';
             document.getElementById('list-title').innerHTML = `<h3>${series.title} Detail</h3>`;
@@ -102,53 +107,45 @@
                 <p>หมวดหมู่: <b>${series.category}</b></p>
                 <div class="vol-grid">`;
             
-            // เรียงเลขเล่มจากน้อยไปมาก
             const sortedVols = [...series.volumes].sort((a, b) => parseFloat(a) - parseFloat(b));
             
             sortedVols.forEach(v => {
-                html += `<span class="vol-tag">volum ${v}</span>`;
+                html += `<span class="vol-tag">เล่มที่ ${v}</span>`;
             });
             
+            // ค้นหาตำแหน่งจริงๆ ใน myLibrary เพื่อให้ลบได้ถูกต้อง
+            const actualIndex = myLibrary.findIndex(s => s.title === series.title);
             html += `</div>
-                <button onclick="deleteSeries(${index})" class="del-btn">Delete Entire Series</button>
+                <button onclick="deleteSeries(${actualIndex})" class="del-btn">Delete Entire Series</button>
             </div>`;
             listDiv.innerHTML = html;
         }
 
         function showAllSeries() {
             document.getElementById('list-title').innerHTML = "<h3>All Series</h3>";
-            displayLibrary();
+            displayLibrary(myLibrary);
         }
 
         function filterBooks(cat) {
-            // เปลี่ยนหัวข้อหน้าให้ตรงตามหมวดที่เลือก
-            const titleMap = {
-                'Comic': 'Manga / Comic',
-                'Novel': 'Light Novel / Novel',
-                'EBook': 'E-Book Collection'
-            };
-            
+            const titleMap = { 'Comic': 'Comic', 'Novel': 'Novel', 'EBook': 'E-Book' };
             document.getElementById('list-title').innerHTML = `<h3>Category: ${titleMap[cat] || cat}</h3>`;
-            
-            // กรองข้อมูลจาก allLibrary (หรือ myLibrary)
-            const filteredData = myLibrary.filter(series => series.category === cat);
-            displayLibrary(filteredData);
+            const filtered = myLibrary.filter(s => s.category === cat);
+            displayLibrary(filtered);
         }
 
-        // --- 3. ระบบจัดการข้อมูล (Data Management) ---
         function addBook() {
             const title = document.getElementById('new-title').value.trim();
             const vol = document.getElementById('new-vol').value.trim();
             const category = document.getElementById('new-category').value;
 
-            if (!title || !vol) return alert("pls add name and volum");
+            if (!title || !vol) return alert("Please fill title and volume");
 
             let series = myLibrary.find(s => s.title.toLowerCase() === title.toLowerCase());
             if (series) {
                 if (!series.volumes.includes(vol)) {
                     series.volumes.push(vol);
                 } else {
-                    alert("you have tht one!");
+                    alert("You already have this volume!");
                     return;
                 }
             } else {
@@ -162,14 +159,13 @@
         }
 
         function deleteSeries(index) {
-            if(confirm("ยืนยันการลบทั้งซีรีส์?")) {
+            if(confirm("Delete this entire series?")) {
                 myLibrary.splice(index, 1);
                 localStorage.setItem('myLibrary', JSON.stringify(myLibrary));
                 showAllSeries();
             }
         }
 
-        // --- 4. ระบบ Import / Export ---
         function exportToCSV() {
             let csv = "Title,Category,Volumes\n";
             myLibrary.forEach(s => {
@@ -179,7 +175,7 @@
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.setAttribute("href", url);
-            link.setAttribute("download", "my_book_shelf_backup.csv");
+            link.setAttribute("download", "my_book_shelf.csv");
             link.click();
         }
 
@@ -191,7 +187,6 @@
             reader.onload = function(e) {
                 const text = e.target.result;
                 const rows = text.split('\n');
-                
                 for (let i = 1; i < rows.length; i++) {
                     const cols = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                     if (cols.length < 3 || !cols[0].trim()) continue;
@@ -210,13 +205,12 @@
                     }
                 }
                 localStorage.setItem('myLibrary', JSON.stringify(myLibrary));
-                alert("Import ข้อมูลสำเร็จ!");
+                alert("Import Success!");
                 location.reload();
             };
             reader.readAsText(file);
         }
 
-        // เริ่มต้นแสดงผล
         displayLibrary();
     </script>
 </body>
