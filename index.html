@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Book Shelf - IAUN</title>
+    <title>My Book Shelf - Local Storage</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>📚 my book shelf</h1>
+        <h1>📚 my book shelf (Offline)</h1>
         
         <div class="filter-container">
             <button onclick="filterBooks('all')">All</button>
@@ -30,54 +30,59 @@
                 <option value="Novel">Novel</option>
                 <option value="EBook">E-Book</option>
             </select>
-            <button onclick="addBook()" id="btn-add">➕ add to shelf</button>
+            <button onclick="addBook()">➕ add to shelf</button>
         </div>
     </div>
 
     <script>
-        const sources = {
-            Comic: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSA35RErZ7gx0C-iy8ZQQnysbSuBOS1HLvSLXUIxOVukp5yckMAGE0hHK8LlA0fWR9PwmpFhaSJM1Vq/pub?gid=1728116497&output=csv',
-            Novel: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSA35RErZ7gx0C-iy8ZQQnysbSuBOS1HLvSLXUIxOVukp5yckMAGE0hHK8LlA0fWR9PwmpFhaSJM1Vq/pub?gid=248383286&output=csv',
-            EBook: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSA35RErZ7gx0C-iy8ZQQnysbSuBOS1HLvSLXUIxOVukp5yckMAGE0hHK8LlA0fWR9PwmpFhaSJM1Vq/pub?gid=1497914856&output=csv'
-        };
-
-        const scriptUrl = 'https://script.google.com/macros/s/AKfycbz7NA9yYxHmL_ahXr8HFsC5Ed75BnuCoJcdixzK8kSZ8LSZ_kow8I2_ZXTHs6Iqh5yU/exec';
-        let allBooks = [];
-
-        async function fetchBooks() {
-            try {
-                allBooks = [];
-                const fetchPromises = Object.entries(sources).map(async ([category, url]) => {
-                    const response = await fetch(url);
-                    const data = await response.text();
-                    const rows = data.split('\n');
-                    for (let i = 1; i < rows.length; i++) {
-                        const columns = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                        if (columns.length >= 2) {
-                            const title = columns[0].replace(/^"|"$/g, '').trim();
-                            const volume = columns[1] ? columns[1].replace(/^"|"$/g, '').trim() : "";
-                            if (title) allBooks.push({ title, volume, category });
-                        }
-                    }
-                });
-                await Promise.all(fetchPromises);
-                displayBooks(allBooks);
-            } catch (error) {
-                document.getElementById('book-list').innerHTML = '❌ ไม่สามารถโหลดข้อมูลได้';
-            }
-        }
+        // ดึงข้อมูลจากความจำเครื่อง (LocalStorage)
+        let allBooks = JSON.parse(localStorage.getItem('myBooks')) || [];
 
         function displayBooks(books) {
             let html = '<ul>';
-            books.forEach(book => {
-                html += `
-                    <li class="book-item">
-                        <div class="book-title">${book.title}</div>
-                        <div class="book-detail">หมวด: ${book.category} | จำนวน: ${book.volume}</div>
-                    </li>`;
-            });
+            if (books.length === 0) {
+                html += '<p style="text-align:center; color:#999;">ยังไม่มีหนังสือในชั้นนี้</p>';
+            } else {
+                books.forEach((book, index) => {
+                    html += `
+                        <li class="book-item" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div class="book-title">${book.title}</div>
+                                <div class="book-detail">หมวด: ${book.category} | จำนวน: ${book.volume}</div>
+                            </div>
+                            <button onclick="deleteBook(${index})" style="background:none; border:none; color:red; cursor:pointer;">ลบ</button>
+                        </li>`;
+                });
+            }
             html += '</ul>';
             document.getElementById('book-list').innerHTML = html;
+        }
+
+        function addBook() {
+            const title = document.getElementById('new-title').value;
+            const volume = document.getElementById('new-volume').value;
+            const category = document.getElementById('new-category').value;
+
+            if (!title) return alert("ใส่ชื่อหนังสือด้วยครับ");
+
+            // เพิ่มข้อมูลลงใน Array
+            allBooks.push({ title, volume, category });
+
+            // เซฟลงความจำเครื่อง
+            localStorage.setItem('myBooks', JSON.stringify(allBooks));
+
+            // ล้างฟอร์มและแสดงผลใหม่
+            document.getElementById('new-title').value = '';
+            document.getElementById('new-volume').value = '';
+            displayBooks(allBooks);
+        }
+
+        function deleteBook(index) {
+            if (confirm("ยืนยันการลบหนังสือเล่มนี้?")) {
+                allBooks.splice(index, 1);
+                localStorage.setItem('myBooks', JSON.stringify(allBooks));
+                displayBooks(allBooks);
+            }
         }
 
         function filterBooks(cat) {
@@ -85,35 +90,8 @@
             else displayBooks(allBooks.filter(book => book.category === cat));
         }
 
-        async function addBook() {
-            const title = document.getElementById('new-title').value;
-            const volume = document.getElementById('new-volume').value;
-            const category = document.getElementById('new-category').value;
-            const btn = document.getElementById('btn-add');
-
-            if (!title) return alert("ใส่ชื่อหนังสือด้วยครับ");
-
-            btn.disabled = true;
-            btn.innerText = "กำลังบันทึก...";
-
-            try {
-                await fetch(scriptUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'add', title, volume, category })
-                });
-                alert("ส่งข้อมูลแล้ว! รออัปเดตสักครู่ครับ");
-                location.reload();
-            } catch (e) {
-                alert("เกิดข้อผิดพลาด");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "➕ add to shelf";
-            }
-        }
-
-        fetchBooks();
+        // แสดงผลทันทีที่เปิดหน้าเว็บ
+        displayBooks(allBooks);
     </script>
 </body>
 </html>
