@@ -57,7 +57,6 @@ function displayLibrary(data) {
         if (series.status === 'green' || series.status === 'end') { label = 'DONE'; cls = 'status-green'; }
         else if (series.status === 'red') { label = 'STOP'; cls = 'status-red'; }
 
-        // ส่ง ID เข้าไปแทน Index เพื่อความแม่นยำ
         html += `
             <div class="series-card" onclick="showDetailById(${series.id})">
                 <div class="card-title">${series.title}</div>
@@ -81,7 +80,7 @@ function showDetailById(id) {
     listDiv.innerHTML = `
         <div style="background:#fff; padding:30px; border-radius:15px; border:1px solid #ddd; max-width: 800px; margin: 0 auto;">
             <h2 style="color:var(--accent); margin-top:0;">${series.title}</h2>
-            <p style="color:#666;">หมวดหมู่: ${series.category}</p>
+            <p style="color:#666;">Category: ${series.category}</p>
 
             <div class="status-toggle-container">
                 <div class="st-btn ${curStatus==='yellow'?'active':''}" onclick="updateStatus(${series.id}, 'yellow')">ONGOING</div>
@@ -89,7 +88,7 @@ function showDetailById(id) {
                 <div class="st-btn ${curStatus==='red'?'active':''}" onclick="updateStatus(${series.id}, 'red')">STOP</div>
             </div>
 
-            <input type="text" id="vol-search" class="vol-search-bar" placeholder="🔍 ค้นหาเลขเล่ม..." oninput="filterVolTable(${series.id})">
+            <input type="text" id="vol-search" class="vol-search-bar" placeholder="🔍 Find volume number..." oninput="filterVolTable(${series.id})">
 
             <div id="vol-table-container">
                 ${renderVolTable(series.id, series.volumes)}
@@ -97,7 +96,7 @@ function showDetailById(id) {
 
             <hr style="margin-top:30px; border:0; border-top:1px solid #eee;">
             <button onclick="deleteSeries(${series.id})" style="margin-top:10px; background:none; color:#d93025; border:none; cursor:pointer; font-size:0.85rem; text-decoration:underline;">
-                ❌ ลบทั้งซีรีส์ (Delete Entire Series)
+                ❌ Delete Entire Series
             </button>
         </div>
     `;
@@ -109,9 +108,9 @@ function renderVolTable(seriesId, volumes, filter = '') {
         .filter(v => v.toString().includes(filter))
         .sort((a, b) => parseFloat(a) - parseFloat(b));
 
-    if(filtered.length === 0) return '<p style="color:#999; padding:20px; text-align:center;">ไม่พบเล่มที่ระบุ</p>';
+    if(filtered.length === 0) return '<p style="color:#999; padding:20px; text-align:center;">No volumes found.</p>';
 
-    let html = '<table class="vol-table"><thead><tr><th>เล่มที่</th><th>สถานะ</th><th style="text-align:right;">จัดการ</th></tr></thead><tbody>';
+    let html = '<table class="vol-table"><thead><tr><th>Volume No.</th><th>Status</th><th style="text-align:right;">Manage</th></tr></thead><tbody>';
     filtered.forEach(v => {
         html += `
             <tr>
@@ -149,9 +148,8 @@ async function addBook() {
     const vol = document.getElementById('new-vol').value.trim();
     const cat = document.getElementById('new-category').value;
     
-    if(!title || !vol) return alert("กรุณาใส่ชื่อและเล่ม!");
+    if(!title || !vol) return alert("Title and Volume are required!");
 
-    // 1. ดึงข้อมูลล่าสุดจาก Supabase มาเช็ค (ป้องกัน ID ชนกัน)
     const { data: exist, error: fetchError } = await _supabase
         .from('book')
         .select('*')
@@ -163,9 +161,8 @@ async function addBook() {
     const now = new Date().toISOString();
 
     if (exist) {
-        // --- กรณีที่ 1: มีเรื่องนี้อยู่แล้ว -> เพิ่มเล่ม (UPDATE) ---
         let vList = exist.volumes || [];
-        if (vList.includes(vol)) return alert("คุณมีเล่มนี้อยู่แล้ว!");
+        if (vList.includes(vol)) return alert("You already own this volume!");
         
         vList.push(vol);
         vList.sort((a, b) => parseFloat(a) - parseFloat(b));
@@ -176,10 +173,8 @@ async function addBook() {
             .eq('id', exist.id);
 
         if (error) alert("Update Error: " + error.message);
-        else alert(`เพิ่มเล่ม ${vol} ในเรื่อง ${title} สำเร็จ!`);
+        else alert(`Added Volume ${vol} to ${title} successfully!`);
     } else {
-        // --- กรณีที่ 2: เรื่องใหม่ -> สร้างแถวใหม่ (INSERT) ---
-        // *** สำคัญ: ห้ามส่ง id ไปเด็ดขาด ให้ Supabase รันเลข 76, 77... ให้เอง ***
         const { error } = await _supabase
             .from('book')
             .insert([{ 
@@ -191,16 +186,16 @@ async function addBook() {
             }]);
 
         if (error) alert("Insert Error: " + error.message);
-        else alert(`เพิ่มซีรีส์ใหม่: ${title} สำเร็จ!`);
+        else alert(`Added new series: ${title} successfully!`);
     }
     
-    // ล้างค่าในช่องกรอกและโหลดรายการใหม่
     document.getElementById('new-title').value = '';
     document.getElementById('new-vol').value = '';
     fetchAllBooks();
 }
+
 async function deleteVolume(seriesId, volToDelete) {
-    if(!confirm(`ยืนยันการลบเล่มที่ ${volToDelete}?`)) return;
+    if(!confirm(`Confirm delete Volume ${volToDelete}?`)) return;
 
     const series = myLibrary.find(s => s.id === seriesId);
     if(!series) return;
@@ -216,7 +211,7 @@ async function deleteVolume(seriesId, volToDelete) {
 }
 
 async function deleteSeries(id) {
-    if(confirm("ยืนยันการลบทั้งซีรีส์? ข้อมูลทั้งหมดจะหายไปและกู้คืนไม่ได้")) {
+    if(confirm("Confirm delete this entire series? This action cannot be undone.")) {
         const { error } = await _supabase.from('book').delete().eq('id', id);
         if(!error) fetchAllBooks();
     }
