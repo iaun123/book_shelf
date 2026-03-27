@@ -151,19 +151,21 @@ async function addBook() {
     
     if(!title || !vol) return alert("กรุณาใส่ชื่อและเล่ม!");
 
-    // 1. ดึงข้อมูลล่าสุดจาก DB โดยตรงเพื่อความแม่นยำ (ป้องกัน ID ซ้ำ)
-    const { data: exist } = await _supabase
+    // 1. ดึงข้อมูลล่าสุดจาก Supabase มาเช็ค (ป้องกัน ID ชนกัน)
+    const { data: exist, error: fetchError } = await _supabase
         .from('book')
         .select('*')
-        .ilike('title', title) // ค้นหาชื่อแบบไม่สนใจตัวพิมพ์เล็ก/ใหญ่
-        .single();
+        .ilike('title', title) 
+        .maybeSingle();
+
+    if (fetchError) return console.error("Fetch Error:", fetchError);
 
     const now = new Date().toISOString();
 
-    if(exist) {
-        // --- กรณีมีหนังสือเรื่องนี้อยู่แล้ว (UPDATE) ---
+    if (exist) {
+        // --- กรณีที่ 1: มีเรื่องนี้อยู่แล้ว -> เพิ่มเล่ม (UPDATE) ---
         let vList = exist.volumes || [];
-        if(vList.includes(vol)) return alert("คุณมีเล่มนี้อยู่แล้ว!");
+        if (vList.includes(vol)) return alert("คุณมีเล่มนี้อยู่แล้ว!");
         
         vList.push(vol);
         vList.sort((a, b) => parseFloat(a) - parseFloat(b));
@@ -171,12 +173,13 @@ async function addBook() {
         const { error } = await _supabase
             .from('book')
             .update({ volumes: vList, last_updated: now })
-            .eq('id', exist.id); // ระบุ ID ให้ชัดเจน
+            .eq('id', exist.id);
 
-        if(error) return alert("Update Error: " + error.message);
+        if (error) alert("Update Error: " + error.message);
+        else alert(`เพิ่มเล่ม ${vol} ในเรื่อง ${title} สำเร็จ!`);
     } else {
-        // --- กรณีเป็นเรื่องใหม่ (INSERT) ---
-        // ไม่ต้องส่งค่า id ไป ให้ Supabase เจนให้เอง
+        // --- กรณีที่ 2: เรื่องใหม่ -> สร้างแถวใหม่ (INSERT) ---
+        // *** สำคัญ: ห้ามส่ง id ไปเด็ดขาด ให้ Supabase รันเลข 76, 77... ให้เอง ***
         const { error } = await _supabase
             .from('book')
             .insert([{ 
@@ -187,15 +190,15 @@ async function addBook() {
                 last_updated: now 
             }]);
 
-        if(error) return alert("Insert Error: " + error.message);
+        if (error) alert("Insert Error: " + error.message);
+        else alert(`เพิ่มซีรีส์ใหม่: ${title} สำเร็จ!`);
     }
     
-    alert("บันทึกเรียบร้อย!");
+    // ล้างค่าในช่องกรอกและโหลดรายการใหม่
     document.getElementById('new-title').value = '';
     document.getElementById('new-vol').value = '';
     fetchAllBooks();
 }
-
 async function deleteVolume(seriesId, volToDelete) {
     if(!confirm(`ยืนยันการลบเล่มที่ ${volToDelete}?`)) return;
 
