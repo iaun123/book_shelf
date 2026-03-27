@@ -5,7 +5,7 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let myLibrary = [];
 let currentDisplayData = [];
 
-// Events
+// --- Events ---
 document.getElementById('login-btn').addEventListener('click', handleLogin);
 document.getElementById('logout-btn').addEventListener('click', () => { _supabase.auth.signOut(); checkUser(); });
 document.getElementById('save-btn').addEventListener('click', addBook);
@@ -16,6 +16,7 @@ document.getElementById('nav-novel').addEventListener('click', () => filterBooks
 document.getElementById('nav-ebook').addEventListener('click', () => filterBooks('EBook'));
 document.getElementById('search-input').addEventListener('input', searchBook);
 
+// --- Auth & Initial Fetch ---
 async function checkUser() {
     const { data: { user } } = await _supabase.auth.getUser();
     if (user) {
@@ -38,22 +39,27 @@ async function handleLogin() {
 
 async function fetchAllBooks() {
     const { data, error } = await _supabase.from('book').select('*').order('title', { ascending: true });
-    if (!error) { myLibrary = data; displayLibrary(myLibrary); }
+    if (!error) { 
+        myLibrary = data; 
+        displayLibrary(myLibrary); 
+    }
 }
 
+// --- Display Logic ---
 function displayLibrary(data) {
     currentDisplayData = data;
     const listDiv = document.getElementById('book-list');
     document.getElementById('back-btn').style.display = 'none';
     
     let html = '<div class="grid-container">';
-    data.forEach((series, index) => {
+    data.forEach((series) => {
         let label = 'ONGOING', cls = 'status-yellow';
         if (series.status === 'green' || series.status === 'end') { label = 'DONE'; cls = 'status-green'; }
         else if (series.status === 'red') { label = 'STOP'; cls = 'status-red'; }
 
+        // ส่ง ID เข้าไปแทน Index เพื่อความแม่นยำ
         html += `
-            <div class="series-card" onclick="showDetail(${index})">
+            <div class="series-card" onclick="showDetailById(${series.id})">
                 <div class="card-title">${series.title}</div>
                 <div class="card-info">${series.category} | ${series.volumes ? series.volumes.length : 0} Vols</div>
                 <div class="status-badge ${cls}">${label}</div>
@@ -63,59 +69,78 @@ function displayLibrary(data) {
     listDiv.innerHTML = data.length > 0 ? html : '<p>No books found.</p>';
 }
 
-function showDetail(index) {
-    const series = currentDisplayData[index];
+function showDetailById(id) {
+    const series = myLibrary.find(s => s.id === id);
+    if (!series) return;
+
     const listDiv = document.getElementById('book-list');
     document.getElementById('back-btn').style.display = 'block';
     
     const curStatus = series.status || 'yellow';
 
     listDiv.innerHTML = `
-        <div style="background:#fff; padding:30px; border-radius:15px; border:1px solid #ddd; max-width: 800px;">
+        <div style="background:#fff; padding:30px; border-radius:15px; border:1px solid #ddd; max-width: 800px; margin: 0 auto;">
             <h2 style="color:var(--accent); margin-top:0;">${series.title}</h2>
-            <p style="color:#666;">Category: ${series.category}</p>
+            <p style="color:#666;">หมวดหมู่: ${series.category}</p>
 
             <div class="status-toggle-container">
-                <div class="st-btn ${curStatus==='yellow'?'active':''}" data-val="yellow" onclick="updateStatus(${series.id}, 'yellow')">ONGOING</div>
-                <div class="st-btn ${curStatus==='green'||curStatus==='end'?'active':''}" data-val="green" onclick="updateStatus(${series.id}, 'green')">DONE</div>
-                <div class="st-btn ${curStatus==='red'?'active':''}" data-val="red" onclick="updateStatus(${series.id}, 'red')">STOP</div>
+                <div class="st-btn ${curStatus==='yellow'?'active':''}" onclick="updateStatus(${series.id}, 'yellow')">ONGOING</div>
+                <div class="st-btn ${curStatus==='green'||curStatus==='end'?'active':''}" onclick="updateStatus(${series.id}, 'green')">DONE</div>
+                <div class="st-btn ${curStatus==='red'?'active':''}" onclick="updateStatus(${series.id}, 'red')">STOP</div>
             </div>
 
-            <input type="text" id="vol-search" class="vol-search-bar" placeholder="🔍 Find volume number (e.g. 5)..." oninput="filterVolTable('${series.id}')">
+            <input type="text" id="vol-search" class="vol-search-bar" placeholder="🔍 ค้นหาเลขเล่ม..." oninput="filterVolTable(${series.id})">
 
             <div id="vol-table-container">
-                ${renderVolTable(series.volumes)}
+                ${renderVolTable(series.id, series.volumes)}
             </div>
 
-            <button onclick="deleteSeries(${series.id})" style="margin-top:30px; background:none; color:#d93025; border:none; cursor:pointer; font-size:0.8rem; text-decoration:underline;">Delete Entire Series</button>
+            <hr style="margin-top:30px; border:0; border-top:1px solid #eee;">
+            <button onclick="deleteSeries(${series.id})" style="margin-top:10px; background:none; color:#d93025; border:none; cursor:pointer; font-size:0.85rem; text-decoration:underline;">
+                ❌ ลบทั้งซีรีส์ (Delete Entire Series)
+            </button>
         </div>
     `;
 }
 
-function renderVolTable(volumes, filter = '') {
+function renderVolTable(seriesId, volumes, filter = '') {
     const vList = volumes || [];
-    const filtered = vList.filter(v => v.toString().includes(filter)).sort((a,b) => parseFloat(a)-parseFloat(b));
-    if(filtered.length === 0) return '<p style="color:#999; padding:20px; text-align:center;">No volumes found.</p>';
+    const filtered = vList
+        .filter(v => v.toString().includes(filter))
+        .sort((a, b) => parseFloat(a) - parseFloat(b));
 
-    let html = '<table class="vol-table"><thead><tr><th>Volume Name / No.</th><th>Status</th></tr></thead><tbody>';
+    if(filtered.length === 0) return '<p style="color:#999; padding:20px; text-align:center;">ไม่พบเล่มที่ระบุ</p>';
+
+    let html = '<table class="vol-table"><thead><tr><th>เล่มที่</th><th>สถานะ</th><th style="text-align:right;">จัดการ</th></tr></thead><tbody>';
     filtered.forEach(v => {
-        html += `<tr><td>Volume ${v}</td><td style="color:#1e8e3e; font-weight:bold; text-align:right;">✅ Owned</td></tr>`;
+        html += `
+            <tr>
+                <td>Volume ${v}</td>
+                <td style="color:#1e8e3e; font-weight:bold;">✅ Owned</td>
+                <td style="text-align:right;">
+                    <button onclick="deleteVolume(${seriesId}, '${v}')" style="background:none; border:none; color:#d93025; cursor:pointer; font-size:1.1rem;">🗑️</button>
+                </td>
+            </tr>`;
     });
     return html + '</tbody></table>';
 }
 
 function filterVolTable(id) {
     const q = document.getElementById('vol-search').value;
-    const series = myLibrary.find(s => s.id.toString() === id);
-    document.getElementById('vol-table-container').innerHTML = renderVolTable(series.volumes, q);
+    const series = myLibrary.find(s => s.id === id);
+    if(series) {
+        document.getElementById('vol-table-container').innerHTML = renderVolTable(series.id, series.volumes, q);
+    }
 }
+
+// --- Action Logic ---
 
 async function updateStatus(id, newStatus) {
     const { error } = await _supabase.from('book').update({ status: newStatus }).eq('id', id);
     if (!error) {
         const idx = myLibrary.findIndex(s => s.id === id);
         myLibrary[idx].status = newStatus;
-        showDetail(currentDisplayData.findIndex(s => s.id === id));
+        showDetailById(id);
     }
 }
 
@@ -123,34 +148,57 @@ async function addBook() {
     const title = document.getElementById('new-title').value.trim();
     const vol = document.getElementById('new-vol').value.trim();
     const cat = document.getElementById('new-category').value;
-    if(!title || !vol) return alert("Title and Volume are required!");
+    if(!title || !vol) return alert("กรุณาใส่ชื่อและเล่ม!");
 
     let exist = myLibrary.find(s => s.title.toLowerCase() === title.toLowerCase());
     const now = new Date().toISOString();
 
     if(exist) {
         let vList = exist.volumes || [];
-        if(!vList.includes(vol)) vList.push(vol);
+        if(vList.includes(vol)) return alert("คุณมีเล่มนี้อยู่แล้ว!");
+        vList.push(vol);
+        vList.sort((a, b) => parseFloat(a) - parseFloat(b));
         await _supabase.from('book').update({ volumes: vList, last_updated: now }).eq('id', exist.id);
     } else {
         await _supabase.from('book').insert([{ title, category: cat, volumes: [vol], status: 'yellow', last_updated: now }]);
     }
-    fetchAllBooks();
+    
     document.getElementById('new-title').value = '';
     document.getElementById('new-vol').value = '';
+    fetchAllBooks();
 }
 
-async function deleteSeries(id) {
-    if(confirm("Confirm to delete this series?")) {
-        await _supabase.from('book').delete().eq('id', id);
-        fetchAllBooks();
+async function deleteVolume(seriesId, volToDelete) {
+    if(!confirm(`ยืนยันการลบเล่มที่ ${volToDelete}?`)) return;
+
+    const series = myLibrary.find(s => s.id === seriesId);
+    if(!series) return;
+
+    const updatedVolumes = series.volumes.filter(v => v.toString() !== volToDelete.toString());
+
+    const { error } = await _supabase.from('book').update({ volumes: updatedVolumes }).eq('id', seriesId);
+    
+    if(!error) {
+        series.volumes = updatedVolumes; // อัปเดต Local Data
+        showDetailById(seriesId); // รีเฟรชหน้าจอ Detail
     }
 }
 
-function filterBooks(cat) { displayLibrary(myLibrary.filter(s => s.category === cat)); }
+async function deleteSeries(id) {
+    if(confirm("ยืนยันการลบทั้งซีรีส์? ข้อมูลทั้งหมดจะหายไปและกู้คืนไม่ได้")) {
+        const { error } = await _supabase.from('book').delete().eq('id', id);
+        if(!error) fetchAllBooks();
+    }
+}
+
+function filterBooks(cat) { 
+    displayLibrary(myLibrary.filter(s => s.category === cat)); 
+}
+
 function searchBook() {
     const q = document.getElementById('search-input').value.toLowerCase();
     displayLibrary(myLibrary.filter(s => s.title.toLowerCase().includes(q)));
 }
 
+// Start App
 checkUser();

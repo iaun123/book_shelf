@@ -11,10 +11,11 @@
 
     <div id="login-overlay" class="auth-overlay">
         <div class="login-card">
-            <h2 style="color: #1a73e8;">🔐 Private Access</h2>
-            <input type="email" id="auth-email" placeholder="Email">
+            <h2 style="color: #1a73e8; margin-bottom: 20px;">🔐 Private Access</h2>
+            <input type="email" id="auth-email" placeholder="Email Address">
             <input type="password" id="auth-password" placeholder="Password">
-            <button id="login-btn">Sign In</button>
+            <button id="login-btn">Sign In to Library</button>
+            <p style="font-size: 0.7rem; color: #999; margin-top: 15px;">Authorized Personnel Only</p>
         </div>
     </div>
 
@@ -24,8 +25,8 @@
                 <input type="text" id="search-input" placeholder="🔍 Search series title...">
             </div>
             <div class="user-controls">
-                <span id="display-user"></span>
-                <button id="logout-btn">Logout</button>
+                <span id="display-user" style="font-size: 0.85rem; color: #666; margin-right: 15px;"></span>
+                <button id="logout-btn" style="background: none; border: 1px solid #ddd; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">Logout</button>
             </div>
         </div>
 
@@ -41,20 +42,31 @@
                 
                 <div class="admin-panel">
                     <h3>➕ Add New Book</h3>
-                    <input type="text" id="new-title" placeholder="Series Title">
-                    <input type="text" id="new-vol" placeholder="Volume #">
+                    <label style="font-size: 0.75rem; color: #666;">Series Name</label>
+                    <input type="text" id="new-title" placeholder="e.g. One Piece">
+                    
+                    <label style="font-size: 0.75rem; color: #666;">Volume Number</label>
+                    <input type="text" id="new-vol" placeholder="e.g. 101">
+                    
+                    <label style="font-size: 0.75rem; color: #666;">Category</label>
                     <select id="new-category">
                         <option value="Comic">Comic</option>
                         <option value="Novel">Novel</option>
                         <option value="EBook">E-Book</option>
                     </select>
+                    
                     <button id="save-btn">Save to Cloud</button>
                 </div>
             </div>
 
             <div class="content">
-                <div id="back-btn" class="back-link">⬅ Back to List</div>
-                <div id="book-list">Loading...</div>
+                <button id="back-btn" class="back-link">⬅ Back to List</button>
+                
+                <div id="book-list">
+                    <div style="text-align: center; padding: 50px; color: #999;">
+                        📡 Connecting to database...
+                    </div>
+                </div>
             </div>
         </div>
     </div>
