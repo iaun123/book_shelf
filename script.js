@@ -153,19 +153,28 @@ async function addBook() {
     let exist = myLibrary.find(s => s.title.toLowerCase() === title.toLowerCase());
     const now = new Date().toISOString();
 
+    let result; // สร้างตัวแปรมาเก็บผลลัพธ์
+
     if(exist) {
         let vList = exist.volumes || [];
         if(vList.includes(vol)) return alert("คุณมีเล่มนี้อยู่แล้ว!");
         vList.push(vol);
         vList.sort((a, b) => parseFloat(a) - parseFloat(b));
-        await _supabase.from('book').update({ volumes: vList, last_updated: now }).eq('id', exist.id);
+        result = await _supabase.from('book').update({ volumes: vList, last_updated: now }).eq('id', exist.id);
     } else {
-        await _supabase.from('book').insert([{ title, category: cat, volumes: [vol], status: 'yellow', last_updated: now }]);
+        result = await _supabase.from('book').insert([{ title, category: cat, volumes: [vol], status: 'yellow', last_updated: now }]);
     }
     
-    document.getElementById('new-title').value = '';
-    document.getElementById('new-vol').value = '';
-    fetchAllBooks();
+    // ตรวจสอบ Error
+    if (result.error) {
+        console.error("Error saving:", result.error);
+        alert("เซฟไม่สำเร็จ: " + result.error.message); // แจ้งเตือนสาเหตุที่หน้าจอเลย
+    } else {
+        alert("บันทึกสำเร็จ!");
+        document.getElementById('new-title').value = '';
+        document.getElementById('new-vol').value = '';
+        fetchAllBooks();
+    }
 }
 
 async function deleteVolume(seriesId, volToDelete) {
