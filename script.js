@@ -179,8 +179,8 @@ async function deleteVolume(seriesId, volToDelete) {
     const { error } = await _supabase.from('book').update({ volumes: updatedVolumes }).eq('id', seriesId);
     
     if(!error) {
-        series.volumes = updatedVolumes; // อัปเดต Local Data
-        showDetailById(seriesId); // รีเฟรชหน้าจอ Detail
+        series.volumes = updatedVolumes; 
+        showDetailById(seriesId);
     }
 }
 
@@ -192,7 +192,7 @@ async function deleteSeries(id) {
 }
 
 function filterBooks(cat) { 
-    displayLibrary(myLibrary.filter(s => s.category === cat)); 
+    displayLibrary(myLibrary.filter(s => s.category.toLowerCase() === cat.toLowerCase())); 
 }
 
 function searchBook() {
