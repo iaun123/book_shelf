@@ -148,33 +148,52 @@ async function addBook() {
     const title = document.getElementById('new-title').value.trim();
     const vol = document.getElementById('new-vol').value.trim();
     const cat = document.getElementById('new-category').value;
+    
     if(!title || !vol) return alert("กรุณาใส่ชื่อและเล่ม!");
 
-    let exist = myLibrary.find(s => s.title.toLowerCase() === title.toLowerCase());
+    // 1. ดึงข้อมูลล่าสุดจาก DB โดยตรงเพื่อความแม่นยำ (ป้องกัน ID ซ้ำ)
+    const { data: exist } = await _supabase
+        .from('book')
+        .select('*')
+        .ilike('title', title) // ค้นหาชื่อแบบไม่สนใจตัวพิมพ์เล็ก/ใหญ่
+        .single();
+
     const now = new Date().toISOString();
 
-    let result; // สร้างตัวแปรมาเก็บผลลัพธ์
-
     if(exist) {
+        // --- กรณีมีหนังสือเรื่องนี้อยู่แล้ว (UPDATE) ---
         let vList = exist.volumes || [];
         if(vList.includes(vol)) return alert("คุณมีเล่มนี้อยู่แล้ว!");
+        
         vList.push(vol);
         vList.sort((a, b) => parseFloat(a) - parseFloat(b));
-        result = await _supabase.from('book').update({ volumes: vList, last_updated: now }).eq('id', exist.id);
+        
+        const { error } = await _supabase
+            .from('book')
+            .update({ volumes: vList, last_updated: now })
+            .eq('id', exist.id); // ระบุ ID ให้ชัดเจน
+
+        if(error) return alert("Update Error: " + error.message);
     } else {
-        result = await _supabase.from('book').insert([{ title, category: cat, volumes: [vol], status: 'yellow', last_updated: now }]);
+        // --- กรณีเป็นเรื่องใหม่ (INSERT) ---
+        // ไม่ต้องส่งค่า id ไป ให้ Supabase เจนให้เอง
+        const { error } = await _supabase
+            .from('book')
+            .insert([{ 
+                title: title, 
+                category: cat, 
+                volumes: [vol], 
+                status: 'yellow', 
+                last_updated: now 
+            }]);
+
+        if(error) return alert("Insert Error: " + error.message);
     }
     
-    // ตรวจสอบ Error
-    if (result.error) {
-        console.error("Error saving:", result.error);
-        alert("เซฟไม่สำเร็จ: " + result.error.message); // แจ้งเตือนสาเหตุที่หน้าจอเลย
-    } else {
-        alert("บันทึกสำเร็จ!");
-        document.getElementById('new-title').value = '';
-        document.getElementById('new-vol').value = '';
-        fetchAllBooks();
-    }
+    alert("บันทึกเรียบร้อย!");
+    document.getElementById('new-title').value = '';
+    document.getElementById('new-vol').value = '';
+    fetchAllBooks();
 }
 
 async function deleteVolume(seriesId, volToDelete) {
