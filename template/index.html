@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Shelf | Personal Library Manager</title>
+    <meta name="description" content="A premium personal book shelf and library collection manager. Organise your novels, comics, and e-books, manage volumes, and update reading status.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Style Sheets -->
+    <link rel="stylesheet" href="template/style.css">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+    <!-- Auth / Login Overlay -->
+    <div id="login-overlay" class="auth-overlay" role="dialog" aria-labelledby="auth-title">
+        <div class="auth-blur-bg"></div>
+        <div class="login-card glass-card">
+            <div class="login-header">
+                <div class="login-logo-container">
+                    <i data-lucide="library" class="login-logo-icon"></i>
+                </div>
+                <h2 id="auth-title">Private Access</h2>
+                <p class="auth-subtitle">Local Library Collection Manager</p>
+            </div>
+            
+            <form id="login-form" onsubmit="event.preventDefault();">
+                <div class="input-group">
+                    <label for="auth-email">User Email</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="mail" class="input-icon"></i>
+                        <input type="email" id="auth-email" placeholder="dev@library.local" required>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="auth-password">Password</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="lock" class="input-icon"></i>
+                        <input type="password" id="auth-password" placeholder="••••••••" required>
+                    </div>
+                </div>
+                
+                <button type="submit" id="login-btn" class="btn btn-primary btn-block">
+                    <span>Unlock Shelf</span>
+                    <i data-lucide="arrow-right"></i>
+                </button>
+            </form>
+            
+            <footer class="login-footer">
+                <p>Reading & writing directly to local book_rows.csv</p>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Main App Content -->
+    <div id="app-content" style="display:none;">
+        <!-- Top Navigation Bar -->
+        <header class="top-nav glass-card">
+            <div class="nav-brand">
+                <i data-lucide="library" class="brand-icon"></i>
+                <h1>My Shelf</h1>
+            </div>
+            
+            <div class="search-box">
+                <i data-lucide="search" class="search-icon"></i>
+                <input type="text" id="search-input" placeholder="Search title, category, status...">
+            </div>
+            
+            <div class="user-controls">
+                <button id="sync-csv-btn" class="btn btn-secondary btn-sm" aria-label="Reload from CSV" title="Reload fresh data from book_rows.csv">
+                    <i data-lucide="refresh-cw"></i>
+                    <span>Reload CSV</span>
+                </button>
+                <div class="user-info">
+                    <i data-lucide="user" class="user-icon"></i>
+                    <span id="display-user"></span>
+                </div>
+                <button id="logout-btn" class="btn btn-secondary btn-sm" aria-label="Sign Out">
+                    <i data-lucide="log-out"></i>
+                    <span>Lock</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+            <!-- Sidebar Navigation & Add Panel -->
+            <aside class="sidebar glass-card">
+                <section class="sidebar-section">
+                    <h2 class="sidebar-heading">Categories</h2>
+                    <nav class="nav-menu">
+                        <button id="nav-all" class="nav-item active">
+                            <i data-lucide="layout-grid"></i>
+                            <span>All Series</span>
+                        </button>
+                        <button id="nav-comic" class="nav-item">
+                            <i data-lucide="book-open"></i>
+                            <span>Comics</span>
+                        </button>
+                        <button id="nav-novel" class="nav-item">
+                            <i data-lucide="book"></i>
+                            <span>Novels</span>
+                        </button>
+                        <button id="nav-ebook" class="nav-item">
+                            <i data-lucide="tablet"></i>
+                            <span>E-Books</span>
+                        </button>
+                    </nav>
+                </section>
+                
+                <hr class="divider">
+                
+                <!-- Form to Add Book -->
+                <section class="sidebar-section admin-panel">
+                    <h2 class="sidebar-heading">Add to Collection</h2>
+                    <form id="add-book-form" onsubmit="event.preventDefault();">
+                        <div class="form-group">
+                            <label for="new-title">Series Name</label>
+                            <input type="text" id="new-title" placeholder="e.g. Conan" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="new-vol">Volume Number</label>
+                            <input type="text" id="new-vol" placeholder="e.g. 1" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="new-category">Category</label>
+                            <div class="select-wrapper">
+                                <select id="new-category">
+                                    <option value="Comic">Comic</option>
+                                    <option value="Novel">Novel</option>
+                                    <option value="EBook">E-Book</option>
+                                </select>
+                                <i data-lucide="chevron-down" class="select-chevron"></i>
+                            </div>
+                        </div>
+                        
+                        <button type="button" id="save-btn" class="btn btn-primary btn-block">
+                            <i data-lucide="plus"></i>
+                            <span>Save to Collection</span>
+                        </button>
+                    </form>
+                </section>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="content">
+                <div class="content-header">
+                    <button id="back-btn" class="btn btn-link back-link" aria-label="Back to List">
+                        <i data-lucide="arrow-left"></i>
+                        <span>Back to Shelf</span>
+                    </button>
+                </div>
+                
+                <!-- Dynamic Content Container -->
+                <div id="book-list" class="dynamic-content">
+                    <div class="connection-status">
+                        <div class="spinner"></div>
+                        <span>Loading collection data...</span>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Script File -->
+    <script src="template/script.js"></script>
+</body>
+</html>
