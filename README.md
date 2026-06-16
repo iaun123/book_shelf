@@ -6,24 +6,35 @@ A premium, glassmorphic personal book and comic collection tracker. Organize you
 
 ## ✨ Features
 * **Premium Glassmorphic Dark UI**: Modern dark theme with radial mesh background gradients, translucent containers, and clean card grids.
-* **Local-First Development Mode**: Runs entirely offline using browser `localStorage` for database storage and simulated sessions.
+* **CSV-Backed Local Database**: Reads from and writes directly to [book_rows.csv](file:///home/cookies/book/book_rows.csv) on disk.
 * **Volume Tracking**: Add and delete specific volumes from any book series.
 * **Category Filtering**: Organize collection by *Comics*, *Novels*, and *E-Books*.
 * **Interactive Design**: Fluid animations, hover transformations, loader spinners, and responsive layouts built for both desktop and mobile.
 
 ---
 
+## 📂 Project Architecture
+
+To keep the workspace clean, all active frontend files are organized inside the **[template/](file:///home/cookies/book/template)** directory:
+* **[template/index.html](file:///home/cookies/book/template/index.html)**: Frontend structure and layout.
+* **[template/style.css](file:///home/cookies/book/template/style.css)**: Glassmorphism design styling and styling rules.
+* **[template/script.js](file:///home/cookies/book/template/script.js)**: Client-side logic, CSV parsing, and server communication.
+
+Our Python dev server ([server.py](file:///home/cookies/book/server.py)) handles routing dynamically, mapping root requests directly to these files inside the `template/` folder.
+
+---
+
 ## 🚀 Getting Started (Local Development)
 
-### 1. Launch the Local Dev Server (Enables CSV Writing)
-Run the custom Python backend server to enable dynamic reading and writing to your local CSV file (`book_rows.csv`):
+### 1. Launch the Local Dev Server
+Run the custom Python backend server to enable dynamic reading and writing to your local CSV file:
 
 ```bash
 python3 server.py
 ```
-Then open [http://localhost:8000](http://localhost:8000) in your web browser.
 
-*(Note: If you run a standard `python3 -m http.server 8000` instead, changes will only be saved in your browser's local storage and won't write back to the `book_rows.csv` file on disk).*
+* **Robust Cwd Resolution**: The server automatically resolves its path using `os.chdir()` on startup, so you can execute the command from **any** working directory.
+* **Port Autodetect**: Automatically detects and binds to any free port starting from `8080` to prevent port conflicts (e.g. `http://localhost:8080`, `http://localhost:8081`, etc.).
 
 ### 2. Login Credentials (Dev Mode)
 Because the app is in **Local Dev Mode**, the login screen will accept **any email and password** to sign in.
@@ -35,7 +46,7 @@ Because the app is in **Local Dev Mode**, the login screen will accept **any ema
 When you are ready to switch from local storage to a live Supabase backend:
 
 ### 1. Restore Supabase Code in `script.js`
-Re-enable the Supabase database connection at the top of [script.js](file:///home/cookies/book/script.js) by mapping the database function calls back to the `_supabase` client.
+Re-enable the Supabase database connection at the top of the script file by mapping the database function calls back to a `supabase` client.
 
 ### 2. PostgreSQL Table Schema
 Create a table named `book` in your Supabase database using the following structure:
