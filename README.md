@@ -2,17 +2,30 @@
 
 # 📖 My Shelf: Personal Collection Tracker
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-GitHub_Pages-2ea44f?style=for-the-badge&logo=github)](https://iaun123.github.io/book_shelf/)
 [![JavaScript](https://img.shields.io/badge/Frontend-Vanilla_JS-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/)
 [![CSS3](https://img.shields.io/badge/UI-Glassmorphism_CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)](https://www.w3.org/Style/CSS/)
 [![Python](https://img.shields.io/badge/Backend-Python_HTTP_Server-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org/)
 [![Supabase](https://img.shields.io/badge/Database-Supabase_%2F_PostgreSQL-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
-[![Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](./LICENSE)
 
 <p align="center">
-  <b>A premium, glassmorphic personal book and comic collection tracker. Organize your novels, comics, and e-books, track owned volume numbers, and manage reading statuses.</b>
+  <b>A premium, glassmorphic personal book and comic collection tracker. Organize your novels, comics, and e-books, track owned volume numbers, and manage reading statuses.</b><br>
+  <a href="https://iaun123.github.io/book_shelf/"><b>🌐 Launch Live Web App</b></a>
 </p>
 
 </div>
+
+---
+
+## 🌐 Run Online (Instant Access)
+
+The application is deployed live and can be accessed directly from your web browser:
+
+👉 **[Launch My Shelf on GitHub Pages](https://iaun123.github.io/book_shelf/)**
+
+* **Zero Setup Required:** Automatically loads initial collection data from `book_rows.csv` and persists changes in your browser's `localStorage`.
+* **Mobile & Desktop Ready:** Responsive glassmorphic layout adapted for phones, tablets, and wide monitors.
 
 ---
 
@@ -28,11 +41,20 @@
 
 ## 📂 Project Architecture
 
-All active frontend files are organized inside the [`template/`](./template) directory:
-- [`template/index.html`](./template/index.html): Frontend structure and layout.
-- [`template/style.css`](./template/style.css): Glassmorphism design styling and styling rules.
-- [`template/script.js`](./template/script.js): Client-side logic, CSV parsing, and server communication.
-- [`server.py`](./server.py): Python dev server with dynamic path resolution and port auto-detection.
+```
+book_shelf/
+├── index.html               # Main entry layout for GitHub Pages / Vercel
+├── style.css                # Glassmorphism styling rules
+├── script.js                # Frontend logic, CSV parser, and offline storage
+├── book_rows.csv            # Local CSV database file
+├── server.py                # Python development server with auto-port bind
+├── vercel.json              # Vercel deployment configuration
+├── .github/
+│   └── workflows/
+│       └── deploy.yml       # GitHub Actions automatic deployment workflow
+├── LICENSE                  # MIT License
+└── README.md                # Project documentation
+```
 
 ---
 
@@ -58,7 +80,7 @@ Because the app is in **Local Dev Mode**, the login screen accepts any test emai
 When switching from local CSV storage to a live Supabase backend:
 
 ### 1. Restore Supabase Code in `script.js`
-Re-enable the Supabase database connection at the top of `template/script.js`.
+Re-enable the Supabase database connection at the top of `script.js`.
 
 ### 2. PostgreSQL Table Schema
 Execute the following SQL query in your Supabase SQL Editor:
@@ -86,23 +108,18 @@ USING (true)
 WITH CHECK (true);
 ```
 
-### 3. Deploying to Vercel
-Deploy directly using the included [`vercel.json`](./vercel.json):
-```bash
-vercel
-```
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
 
 ---
 
 ## 👨‍💻 Author
 
 **Chananya Meepayung (Aun)**
+- **Role:** Robotics & Software Engineer
 - **GitHub:** [@iaun123](https://github.com/iaun123)
 - **LinkedIn:** [chananya-meepayung](https://www.linkedin.com/in/chananya-meepayung-b39335356/)
 - **Email:** chananyaaun123@gmail.com
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.

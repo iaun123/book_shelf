@@ -38,20 +38,10 @@ class LibraryHandler(http.server.SimpleHTTPRequestHandler):
             
             books = self.read_csv()
             self.wfile.write(json.dumps(books).encode('utf-8'))
-        elif self.path in ('/', '/index.html'):
-            # Route root requests directly to the template/index.html
-            self.path = '/template/index.html'
-            super().do_GET()
-        elif self.path == '/style.css':
-            # Route root stylesheet requests to template/style.css
-            self.path = '/template/style.css'
-            super().do_GET()
-        elif self.path == '/script.js':
-            # Route root script requests to template/script.js
-            self.path = '/template/script.js'
+        elif self.path == '/':
+            self.path = '/index.html'
             super().do_GET()
         else:
-            # Fallback to serve static files normally
             super().do_GET()
 
     def do_POST(self):
@@ -90,7 +80,6 @@ class LibraryHandler(http.server.SimpleHTTPRequestHandler):
                     try:
                         volumes = json.loads(row['volumes'])
                     except:
-                        # Fallback parsing if JSON array is invalid
                         val = row['volumes'].replace('[','').replace(']','').replace('"','').strip()
                         volumes = [v.strip() for v in val.split(',') if v.strip()]
                 
@@ -106,8 +95,6 @@ class LibraryHandler(http.server.SimpleHTTPRequestHandler):
         return books
 
     def write_csv(self, books):
-        # Match original CSV columns hierarchy:
-        # title,category,volumes,user_id,id,last_updated,status
         fieldnames = ['title', 'category', 'volumes', 'user_id', 'id', 'last_updated', 'status']
         
         with open(CSV_FILE, 'w', encoding='utf-8', newline='') as f:
