@@ -1,26 +1,38 @@
-# My Shelf 📖
+<div align="center">
 
-A premium, glassmorphic personal book and comic collection tracker. Organize your novels, comics, and e-books, track owned volume numbers, and manage reading statuses.
+# 📖 My Shelf: Personal Collection Tracker
+
+[![JavaScript](https://img.shields.io/badge/Frontend-Vanilla_JS-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/)
+[![CSS3](https://img.shields.io/badge/UI-Glassmorphism_CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)](https://www.w3.org/Style/CSS/)
+[![Python](https://img.shields.io/badge/Backend-Python_HTTP_Server-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org/)
+[![Supabase](https://img.shields.io/badge/Database-Supabase_%2F_PostgreSQL-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+[![Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
+
+<p align="center">
+  <b>A premium, glassmorphic personal book and comic collection tracker. Organize your novels, comics, and e-books, track owned volume numbers, and manage reading statuses.</b>
+</p>
+
+</div>
 
 ---
 
 ## ✨ Features
-* **Premium Glassmorphic Dark UI**: Modern dark theme with radial mesh background gradients, translucent containers, and clean card grids.
-* **CSV-Backed Local Database**: Reads from and writes directly to [book_rows.csv](file:///home/cookies/book/book_rows.csv) on disk.
-* **Volume Tracking**: Add and delete specific volumes from any book series.
-* **Category Filtering**: Organize collection by *Comics*, *Novels*, and *E-Books*.
-* **Interactive Design**: Fluid animations, hover transformations, loader spinners, and responsive layouts built for both desktop and mobile.
+
+- 💎 **Premium Glassmorphic Dark UI:** Modern dark theme with radial mesh background gradients, translucent frosted containers, and clean card grids.
+- 💾 **CSV-Backed Local Storage:** Reads from and writes directly to `book_rows.csv` on disk with zero external database dependencies during local development.
+- 📚 **Volume & Series Tracking:** Add and delete specific volumes from any book series with instant visual badges.
+- 🏷️ **Category Filtering:** Smoothly categorize collections into *Comics*, *Novels*, and *E-Books*.
+- 📱 **Interactive & Responsive:** Fluid animations, hover micro-interactions, loader spinners, and mobile-friendly responsive grid.
 
 ---
 
 ## 📂 Project Architecture
 
-To keep the workspace clean, all active frontend files are organized inside the **[template/](file:///home/cookies/book/template)** directory:
-* **[template/index.html](file:///home/cookies/book/template/index.html)**: Frontend structure and layout.
-* **[template/style.css](file:///home/cookies/book/template/style.css)**: Glassmorphism design styling and styling rules.
-* **[template/script.js](file:///home/cookies/book/template/script.js)**: Client-side logic, CSV parsing, and server communication.
-
-Our Python dev server ([server.py](file:///home/cookies/book/server.py)) handles routing dynamically, mapping root requests directly to these files inside the `template/` folder.
+All active frontend files are organized inside the [`template/`](./template) directory:
+- [`template/index.html`](./template/index.html): Frontend structure and layout.
+- [`template/style.css`](./template/style.css): Glassmorphism design styling and styling rules.
+- [`template/script.js`](./template/script.js): Client-side logic, CSV parsing, and server communication.
+- [`server.py`](./server.py): Python dev server with dynamic path resolution and port auto-detection.
 
 ---
 
@@ -33,23 +45,23 @@ Run the custom Python backend server to enable dynamic reading and writing to yo
 python3 server.py
 ```
 
-* **Robust Cwd Resolution**: The server automatically resolves its path using `os.chdir()` on startup, so you can execute the command from **any** working directory.
-* **Port Autodetect**: Automatically detects and binds to any free port starting from `8080` to prevent port conflicts (e.g. `http://localhost:8080`, `http://localhost:8081`, etc.).
+- **Robust Cwd Resolution:** The server automatically resolves its root path, so you can execute the command from any working directory.
+- **Port Autodetect:** Automatically binds to any free port starting from `8080` (e.g. `http://localhost:8080`, `http://localhost:8081`).
 
 ### 2. Login Credentials (Dev Mode)
-Because the app is in **Local Dev Mode**, the login screen will accept **any email and password** to sign in.
+Because the app is in **Local Dev Mode**, the login screen accepts any test email and password to sign in.
 
 ---
 
 ## 🗄️ Database Setup & Supabase Migration
 
-When you are ready to switch from local storage to a live Supabase backend:
+When switching from local CSV storage to a live Supabase backend:
 
 ### 1. Restore Supabase Code in `script.js`
-Re-enable the Supabase database connection at the top of the script file by mapping the database function calls back to a `supabase` client.
+Re-enable the Supabase database connection at the top of `template/script.js`.
 
 ### 2. PostgreSQL Table Schema
-Create a table named `book` in your Supabase database using the following structure:
+Execute the following SQL query in your Supabase SQL Editor:
 
 ```sql
 CREATE TABLE IF NOT EXISTS public.book (
@@ -65,7 +77,7 @@ CREATE TABLE IF NOT EXISTS public.book (
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.book ENABLE ROW LEVEL SECURITY;
 
--- Allow authenticated and anonymous public access policy
+-- Allow public access policy
 CREATE POLICY "Allow public access for dev" 
 ON public.book 
 FOR ALL 
@@ -75,8 +87,22 @@ WITH CHECK (true);
 ```
 
 ### 3. Deploying to Vercel
-This project includes a [vercel.json](file:///home/cookies/book/vercel.json) config file for static routing. To deploy:
+Deploy directly using the included [`vercel.json`](./vercel.json):
 ```bash
 vercel
 ```
-Your deployment will automatically serve `index.html` as the entry route.
+
+---
+
+## 👨‍💻 Author
+
+**Chananya Meepayung (Aun)**
+- **GitHub:** [@iaun123](https://github.com/iaun123)
+- **LinkedIn:** [chananya-meepayung](https://www.linkedin.com/in/chananya-meepayung-b39335356/)
+- **Email:** chananyaaun123@gmail.com
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
